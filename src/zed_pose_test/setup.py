@@ -33,6 +33,10 @@ setup(
             'zed_pose_logger = zed_pose_test.zed_pose_logger_ros2:main',
             'path_follower = zed_pose_test.path_follower_node:main',
             'fake_robot_sim = zed_pose_test.fake_robot_sim:main',
+            'underwater_physics_sim = zed_pose_test.underwater_physics_sim:main',
+            'fake_zed_camera = zed_pose_test.fake_zed_camera:main',
+            'fake_imu_sim = zed_pose_test.fake_imu_sim:main',
+            'sensor_fusion_ekf = zed_pose_test.sensor_fusion_ekf:main',
         ],
     },
 )

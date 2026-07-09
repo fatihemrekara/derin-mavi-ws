@@ -5,7 +5,7 @@ Rota Takip / Hareket Node'u — SIRALI WAYPOINT TAKIBI + Pure Pursuit
 -------------------------------------------------------------------
 Girisler:
   - /planned_route     (nav_msgs/Path)          : planlanan rota
-  - /zed/zed_node/pose (geometry_msgs/PoseStamped) : SLAM'den anlik poz
+  - /robot/filtered_pose (geometry_msgs/PoseStamped) : EKF'den anlik poz
 Cikis:
   - /cmd_vel           (geometry_msgs/Twist)
   - /follower_markers  (visualization_msgs/MarkerArray)
@@ -67,7 +67,7 @@ class PathFollowerNode(Node):
         super().__init__('path_follower')
 
         self.declare_parameter('path_topic', '/planned_route')
-        self.declare_parameter('pose_topic', '/zed/zed_node/pose')
+        self.declare_parameter('pose_topic', '/robot/filtered_pose')
         self.declare_parameter('cmd_vel_topic', '/cmd_vel')
         self.declare_parameter('control_rate_hz', 20.0)
         self.declare_parameter('lookahead', 1.2)

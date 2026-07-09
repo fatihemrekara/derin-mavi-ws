@@ -32,15 +32,39 @@ def generate_launch_description():
         parameters=[{'active_window_size': 5}] # İstersen parametreni buradan da verebilirsin
     )
 
-    # 4. Fake Robot Sim Node
-    sim_node = Node(
+    # 4. Underwater Physics Sim Node (Motor / Kinematics)
+    physics_sim_node = Node(
         package=package_name,
-        executable='fake_robot_sim',    # setup.py'deki console_scripts adı
-        name='fake_robot_sim',
+        executable='underwater_physics_sim',
+        name='underwater_physics_sim',
         output='screen'
     )
 
-    # 5. RViz2 (Harici bir araç olduğu için ExecuteProcess ile çağırıyoruz)
+    # 5. Fake ZED Camera Node (Sensor Noise)
+    zed_camera_node = Node(
+        package=package_name,
+        executable='fake_zed_camera',
+        name='fake_zed_camera',
+        output='screen'
+    )
+
+    # 6. Fake IMU Sim Node
+    imu_sim_node = Node(
+        package=package_name,
+        executable='fake_imu_sim',
+        name='fake_imu_sim',
+        output='screen'
+    )
+
+    # 7. Sensor Fusion (EKF) Node
+    ekf_node = Node(
+        package=package_name,
+        executable='sensor_fusion_ekf',
+        name='sensor_fusion_ekf',
+        output='screen'
+    )
+
+    # 8. RViz2 (Harici bir araç olduğu için ExecuteProcess ile çağırıyoruz)
     rviz_cmd = ExecuteProcess(
         cmd=['rviz2'],
         output='screen'
@@ -51,6 +75,9 @@ def generate_launch_description():
         gps_node,
         route_node,
         follower_node,
-        sim_node,
+        physics_sim_node,
+        zed_camera_node,
+        imu_sim_node,
+        ekf_node,
         rviz_cmd
     ])
