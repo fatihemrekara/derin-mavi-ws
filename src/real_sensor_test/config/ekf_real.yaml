@@ -1,0 +1,50 @@
+ekf_filter_node:
+  ros__parameters:
+    frequency: 30.0
+    two_d_mode: false # Su altı 3 boyutlu bir ortamdır
+    publish_tf: true
+    
+    # Frame isimleri standart ROS2 formatıdır
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom
+
+    # ----------------------------------------------------
+    # SENSÖR 1: ZED Kamerasından Gelen Odometri
+    # Sadece X, Y konumlarını ve X, Y, Z Hızlarını (Velocity) alıyoruz.
+    # Z konumu ve Yön (Yaw) verisine güvenmiyoruz (drift yapar).
+    # ----------------------------------------------------
+    odom0: /zed/zed_node/odom
+    odom0_config: [true,  true,  false,  # x, y, z
+                   false, false, false,  # roll, pitch, yaw
+                   true,  true,  true,   # vx, vy, vz
+                   false, false, false,  # vroll, vpitch, vyaw
+                   false, false, false]  # ax, ay, az
+    odom0_differential: false
+
+    # ----------------------------------------------------
+    # SENSÖR 2: Cube Orange (Pixhawk) IMU
+    # Sadece Yön (Roll, Pitch, Yaw), Açısal Hız ve İvmeleri alıyoruz.
+    # Pusula (Yaw) kaymaz, bu veriye çok güveniyoruz.
+    # ----------------------------------------------------
+    imu0: /mavros/imu/data
+    imu0_config: [false, false, false,
+                  true,  true,  true,    # roll, pitch, yaw
+                  false, false, false,
+                  true,  true,  true,    # vroll, vpitch, vyaw
+                  true,  true,  true]    # ax, ay, az
+    imu0_differential: false
+
+    # ----------------------------------------------------
+    # SENSÖR 3: Derinlik Sensörü (Barometre)
+    # MAVROS, ArduSub'dan gelen barometre derinliğini 'pose' olarak basar.
+    # Sadece Mutlak Z (Derinlik) konumunu alıyoruz.
+    # ----------------------------------------------------
+    pose0: /mavros/local_position/pose
+    pose0_config: [false, false, true,   # Sadece Z
+                   false, false, false,
+                   false, false, false,
+                   false, false, false,
+                   false, false, false]
+    pose0_differential: false

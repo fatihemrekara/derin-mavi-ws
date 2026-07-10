@@ -103,6 +103,9 @@ class PathFollowerNode(Node):
         self.pose = None
         self.last_pose_time = None
         self.goal_reached = False
+        self.startup_aligned = False
+        self.align_thresh = math.radians(5.0)
+        
         self._warned_no_path = False
         self._warned_no_pose = False
         self._warned_stale = False
@@ -144,6 +147,7 @@ class PathFollowerNode(Node):
         self.path_frame = msg.header.frame_id or 'map'
         self.wp_idx = 0
         self.goal_reached = False
+        self.startup_aligned = False
         self._warned_no_path = False
         self.get_logger().info(
             f'Yeni rota alindi: {len(pts)} waypoint, {cum[-1]:.1f} m '
@@ -216,6 +220,22 @@ class PathFollowerNode(Node):
         target_dist = math.hypot(dx, dy)
         heading_err = normalize_angle(math.atan2(dy, dx) - yaw)
 
+        # Başlangıçta rotaya tam hizalanma (Açıyı döndürüp sonra yola çıkma)
+        if not self.startup_aligned:
+            if abs(heading_err) > self.align_thresh:
+                cmd = Twist()
+                cmd.linear.x = 0.0
+                cmd.angular.z = max(-self.w_max, min(self.w_max, self.k_heading * heading_err))
+                self.cmd_pub.publish(cmd)
+                self.publish_markers(target)
+                self.get_logger().info(
+                    f'Baslangic hizalamasi: Hata = {math.degrees(heading_err):.1f} derece',
+                    throttle_duration_sec=0.5)
+                return
+            else:
+                self.get_logger().info('Baslangic hizalanmasi tamamlandi! Ileri hareket basliyor.')
+                self.startup_aligned = True
+
         cmd = Twist()
         if abs(heading_err) > self.rotate_thresh:
             cmd.linear.x = 0.0
@@ -280,28 +300,53 @@ class PathFollowerNode(Node):
             break
 
     def find_target(self, x, y):
-        """Pure pursuit hedef noktasi.
+        """Gerçek Pure Pursuit Hedef Noktasi (Lookahead Çemberi Kesişimi).
 
-        Arac siradaki waypoint'e lookahead'den uzaksa dogrudan o
-        waypoint hedeflenir (rotaya donus). Yakinsa, rota boyunca
-        toplam lookahead mesafesine denk gelen ara nokta hedeflenir."""
+        1. Aracın rotaya olan en yakın noktasını (local izdüşüm) bulur.
+        2. Bu noktadan ileriye doğru bakarak, araca tam `lookahead` mesafesinde
+           olan rotadaki kesişim noktasını (havucu) hedefler.
+        """
         pts = self.path_pts
-        wi = self.wp_idx
-        d_first = math.hypot(pts[wi][0] - x, pts[wi][1] - y)
-        if d_first >= self.lookahead:
-            return pts[wi]
+        if not pts:
+            return (x, y)
+        if len(pts) == 1:
+            return pts[0]
 
-        acc = d_first
-        i = wi
-        while i < len(pts) - 1:
-            ax, ay = pts[i]
-            bx, by = pts[i + 1]
-            seg = math.hypot(bx - ax, by - ay)
-            if acc + seg >= self.lookahead:
-                t = (self.lookahead - acc) / seg if seg > 1e-9 else 0.0
-                return (ax + (bx - ax) * t, ay + (by - ay) * t)
-            acc += seg
-            i += 1
+        wi = self.wp_idx
+        
+        # 1. Local Search: Rotaya olan en yakin noktayi bul.
+        # Tum rotayi aramak yerine sadece wi'den baslayarak belirli bir pencere
+        # icinde arariz. Boylece rota kendini kestiginde (loop) yanlis yola atlamayiz.
+        search_window = int(self.lookahead / 0.5) * 4 # Yaklasik 4x lookahead mesafesi kadar ileri bak
+        end_idx = min(len(pts), wi + search_window + 2)
+        
+        min_dist = float('inf')
+        closest_idx = wi
+        for i in range(wi, end_idx):
+            d = math.hypot(pts[i][0] - x, pts[i][1] - y)
+            if d < min_dist:
+                min_dist = d
+                closest_idx = i
+
+        # 2. Eger rotadan lookahead'den daha uzaksak (cember rotayi kesmiyorsa),
+        # dogrudan en yakin noktayi hedefle ki araba yola hizlica donsun.
+        if min_dist >= self.lookahead:
+            return pts[closest_idx]
+
+        # 3. Lookahead cemberinin rotayi kestigi noktayi bul
+        # closest_idx'den baslayarak ileriye dogru ilk lookahead disi noktayi ara
+        for i in range(closest_idx + 1, len(pts)):
+            d = math.hypot(pts[i][0] - x, pts[i][1] - y)
+            if d >= self.lookahead:
+                # pts[i-1] (iceride) ile pts[i] (disarida) arasinda cember kesisimi interpolasyonu
+                prev_d = math.hypot(pts[i-1][0] - x, pts[i-1][1] - y)
+                # Basit lineer oran (cember yayina cok yakin bir yaklasik deger)
+                ratio = (self.lookahead - prev_d) / (d - prev_d) if (d - prev_d) > 1e-5 else 0.0
+                tx = pts[i-1][0] + ratio * (pts[i][0] - pts[i-1][0])
+                ty = pts[i-1][1] + ratio * (pts[i][1] - pts[i-1][1])
+                return (tx, ty)
+                
+        # Eger rotanin sonuna ulasildiysa ve son nokta hala cemberin icindeyse
         return pts[-1]
 
     def stop(self):
