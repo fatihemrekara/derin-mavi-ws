@@ -28,8 +28,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'gps_to_local_node  = zed_pose_test.gps_to_local_node:main',
+            'gps_to_local_node = zed_pose_test.gps_to_local_node:main',
             'route_planner = zed_pose_test.route_planner_node:main',
+            'straight_route_planner = zed_pose_test.straight_route_planner:main',
             'zed_pose_logger = zed_pose_test.zed_pose_logger_ros2:main',
             'path_follower = zed_pose_test.path_follower_node:main',
             'fake_robot_sim = zed_pose_test.fake_robot_sim:main',
@@ -37,6 +38,13 @@ setup(
             'fake_zed_camera = zed_pose_test.fake_zed_camera:main',
             'fake_imu_sim = zed_pose_test.fake_imu_sim:main',
             'sensor_fusion_ekf = zed_pose_test.sensor_fusion_ekf:main',
+            'nozed_test = zed_pose_test.nozed_test:main',
+            'zed_to_mavros_bridge = zed_pose_test.zed_to_mavros_bridge:main',
+            'videotask = zed_pose_test.videotask:main',
+            'video_gorevi = zed_pose_test.video_gorevi:main',
+            'MiniRov_cam = zed_pose_test.MiniRov_cam:main',
+            'path_follower_steps = zed_pose_test.path_follower_steps:main',
+            'station_gui = zed_pose_test.station_gui:main',
         ],
     },
 )

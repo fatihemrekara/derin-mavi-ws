@@ -1,0 +1,33 @@
+BÜYÜK ARAÇ ÖZELLİKLERİ VE SİSTEM MİMARİSİ
+===================================================
+
+1. DONANIM MİMARİSİ VE BAĞLANTILAR
+---------------------------------------------------
+- Kıyı İstasyonu (QGroundControl) <--> Jetson [Ethernet üzerinden iletişim]
+- Companion Computer: Nvidia Jetson
+- Uçuş Kontrolcüsü (FC): Cube Orange (Pixhawk)
+- Jetson <--> Cube Orange [USB üzerinden iletişim - MAVROS/Serial haberleşmesi]
+- İtki Sistemi: 8 Adet Motor
+
+2. HAREKET KABİLİYETİ
+---------------------------------------------------
+- Sürüş Tipi: Holonomik (Araç, burnunu çevirmek / yönünü dönmek zorunda kalmadan yana doğru -strafing- doğrudan hareket edebilir.)
+- Sualtı Derinlik Kontrolü: ArduSub (RC_OVERRIDE sinyalleri kullanılarak DEPTH_HOLD vb. modlarla uyumlu hareket sağlanıyor.)
+
+3. SENSÖRLER VE YÖN BULMA (NAVİGASYON)
+---------------------------------------------------
+- Ana Görsel Sensör: ZED2 Kamera
+  * Kullanım Amacı: SLAM, görsel odometri ve derinlik verisinden engel tespiti (LaserScan türevi algoritmalarla).
+  * Geometri ve Montaj: ZED2, aracın önünde yere dik konumda (araca düz) duran düz bir cam (flat port) içeren hazne içine yerleştirilmiştir. ZED2 kameranın kendisi ise aracın içinde aşağıya dönük (yaklaşık 30 derecelik açı ile) monte edilmiştir. Dolayısıyla kameranın optik ekseni ile camın normali arasında 30 derecelik bir fark vardır. Bu konfigürasyon, ışığın kırılmasını asimetrik şekillerde (açılı) etkilemektedir.
+  * Z Ekseninde (Derinlik) Güvenilirlik: Şu anlık ZED2'nin tahmini Z (derinlik) verisine tamamen güvenilmiyor (ağırlıklı olarak barometre vs. kullanılması daha sağlıklı). ZED2'den görsel odometri alınırken daha çok X, Y (düzlem) ve Heading (Yaw) verilerinden faydalanılmakta.
+- DVL (Doppler Velocity Log): Araçta mevcut değil.
+- Dahili Sensörler (Cube Orange): IMU birimi.
+
+4. YAZILIM, OTONOMİ VE KONTROL
+---------------------------------------------------
+- Temel Yazılım Yığını: ROS2, ArduSub, MAVROS, ZED SDK
+- Uçuş Kontrol Filtresi: Cube Orange üzerinde şu an EKF3 devrede (ileride ihtiyaca göre değişebilir).
+- Kontrol Yaklaşımı:
+  * Görev yönetimi (videotask vb.) ile otonom manevralar ve konum bazlı yönlendirmeler sağlanıyor.
+  * Otonom düzlemsel hareketler ve 180 derece dönüşler gibi eylemler geliştirildi.
+  * Olası komut çakışmalarını önlemek için path_follower ve görev makinesi arasında (nöbetleşe) kontrol aktarımı var.

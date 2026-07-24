@@ -48,10 +48,9 @@ def generate_launch_description():
     )
 
     # 3. Path Follower Node'u (zed_pose_test paketinden cagiriliyor)
-    # Mevcut kodlarinizi BOZMAMAK icin, o kodu kopyalamiyoruz, dogrudan eski paketten calistiriyoruz.
     path_follower_node = Node(
         package='zed_pose_test',
-        executable='path_follower_node',
+        executable='path_follower',
         name='path_follower_node',
         output='screen',
         remappings=[
