@@ -1,0 +1,8 @@
+std_msgs/Header header
+float32 valid_feature_ratio
+float32 tracked_feature_ratio
+float32 pixel_covariance_ratio
+float32 nis_z_score_rmse
+float32 accel_deviation
+float32 speed_deviation
+float32 depth_feature_cov_median

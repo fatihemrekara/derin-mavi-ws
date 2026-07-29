@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Sample ROVIO Node Launch File with Options -->
+
+<launch>
+  <!-- <arg name="filter_config" default="$(find rovio)/cfg/rcm_equirefrac/rovio_rcm.info"/> -->
+  <arg name="filter_config" default="$(find rovio)/cfg/rcm_equirefrac/rovio_rcm_online.info"/>
+  <arg name="camera0_config" default="$(find rovio)/cfg/rcm_equirefrac/cam0.yaml"/>
+  <arg name="camera1_config" default="$(find rovio)/cfg/rcm_equirefrac/cam1.yaml"/>
+  
+  <arg name="refractive_index" default="1.33"/> <!-- default for water-->
+  <arg name="clahe_clip_limit" default="3.2"/>
+  <arg name="img_gamma" default="1.0"/>
+  <arg name="imu_offset" default="-0.00177"/>
+
+  <node pkg="rovio" type="rovio_node" name="rovio" output="screen" clear_params="true" required="true">
+
+    <!-- Config File -->
+    <param name="filter_config" value="$(arg filter_config)"/>
+
+    <!-- Camera Calibration YAML File -->
+    <param name="camera0_config" value="$(arg camera0_config)"/>
+    <param name="camera1_config" value="$(arg camera1_config)"/>
+
+    <param name="clahe_grid_size" value="8"/>
+    <param name="clahe_clip_limit" value="$(arg clahe_clip_limit)"/>
+    <param name="img_gamma" value="$(arg img_gamma)"/>
+    <param name="imu_offset" value="$(arg imu_offset)"/>
+
+    <!-- Refractive index of the medium, this ros param overwrites the one in the rovio.info file -->
+    <param name="refractive_index" value="$(arg refractive_index)"/>
+
+    <!-- Input Topics -->
+    <remap from="imu0" to="/alphasense_driver_ros/imu"/>
+    <remap from="cam0/image_raw" to="/alphasense_driver_ros/cam0"/>
+    <remap from="cam1/image_raw" to="/alphasense_driver_ros/cam1"/>
+    <!-- <remap from="cam2/image_raw" to="/alphasense_driver_ros/cam3"/>
+    <remap from="cam3/image_raw" to="/alphasense_driver_ros/cam4"/> -->
+
+    <!-- barometric pressure -->
+    <!-- <remap from="/underwater_pressure" to="/mavros/imu/static_pressure"/> -->
+
+  </node>
+
+
+</launch>
