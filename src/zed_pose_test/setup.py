@@ -29,7 +29,9 @@ setup(
     entry_points={
         'console_scripts': [
             'gps_to_local_node = zed_pose_test.gps_to_local_node:main',
+            'local_waypoints_node = zed_pose_test.local_waypoints_node:main',
             'route_planner = zed_pose_test.route_planner_node:main',
+            'square_route_planner = zed_pose_test.square_route_planner:main',
             'straight_route_planner = zed_pose_test.straight_route_planner:main',
             'zed_pose_logger = zed_pose_test.zed_pose_logger_ros2:main',
             'path_follower = zed_pose_test.path_follower_node:main',

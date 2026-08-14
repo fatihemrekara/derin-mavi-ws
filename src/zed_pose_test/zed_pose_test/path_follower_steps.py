@@ -44,7 +44,8 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPo
 
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, Point
-from mavros_msgs.msg import OverrideRCIn
+from mavros_msgs.msg import OverrideRCIn, VFR_HUD
+from mavros_msgs.srv import CommandBool, SetMode
 from visualization_msgs.msg import Marker, MarkerArray
 
 
@@ -68,7 +69,7 @@ class PathFollowerNode(Node):
         super().__init__('path_follower')
 
         self.declare_parameter('path_topic', '/planned_route')
-        self.declare_parameter('pose_topic', '/robot/filtered_pose')
+        self.declare_parameter('pose_topic', '/mavros/local_position/pose')
         self.declare_parameter('rc_override_topic', '/mavros/rc/override')
         self.declare_parameter('control_rate_hz', 20.0)
         self.declare_parameter('lookahead', 1.2)
@@ -126,6 +127,15 @@ class PathFollowerNode(Node):
             Path, str(gp('path_topic')), self.on_path, latched)
         self.pose_sub = self.create_subscription(
             PoseStamped, str(gp('pose_topic')), self.on_pose, sensor_qos)
+        self.vfr_sub = self.create_subscription(
+            VFR_HUD, '/mavros/vfr_hud', self.on_vfr, sensor_qos)
+
+        self.arm_client = self.create_client(CommandBool, '/mavros/cmd/arming')
+        self.mode_client = self.create_client(SetMode, '/mavros/set_mode')
+
+        self.follower_state = 'WAITING_FOR_PATH'
+        self.dive_start_time = None
+        self.alt = 0.0
 
         self.rc_pub = self.create_publisher(OverrideRCIn, str(gp('rc_override_topic')), 10)
         self.stopped_published = False
@@ -162,7 +172,14 @@ class PathFollowerNode(Node):
         self.stopped_published = False
         self.get_logger().info(
             f'Yeni rota alindi: {len(pts)} waypoint, {cum[-1]:.1f} m '
-            f'(frame: {self.path_frame}). Sirali takip basliyor.')
+            f'(frame: {self.path_frame}).')
+            
+        if self.follower_state in ['WAITING_FOR_PATH', 'DONE']:
+            self.follower_state = 'ARMING'
+            self.get_logger().info('Arm ve Dalis islemi baslatilacak (Sirali takip icin).')
+
+    def on_vfr(self, msg: VFR_HUD):
+        self.alt = msg.altitude
 
     def on_pose(self, msg: PoseStamped):
         p = msg.pose.position
@@ -205,9 +222,44 @@ class PathFollowerNode(Node):
 
         if self.goal_reached:
             self.stop()
+            self.follower_state = 'DONE'
             return
 
         x, y, yaw = self.pose
+        now = self.get_clock().now()
+
+        if self.follower_state == 'WAITING_FOR_PATH' or self.follower_state == 'DONE':
+            return
+            
+        elif self.follower_state == 'ARMING':
+            # Modu Depth Hold (ALT_HOLD) yapiyoruz
+            if self.mode_client.wait_for_service(timeout_sec=1.0):
+                req = SetMode.Request()
+                req.custom_mode = 'ALT_HOLD'
+                self.mode_client.call_async(req)
+                
+            # Araci arm ediyoruz
+            if self.arm_client.wait_for_service(timeout_sec=1.0):
+                req = CommandBool.Request()
+                req.value = True
+                self.arm_client.call_async(req)
+                
+            self.follower_state = 'DIVING'
+            self.dive_start_time = now
+            self.get_logger().info('ALT_HOLD moduna alindi ve Arm edildi. Dalis basliyor (PWM 1350)...')
+            return
+            
+        elif self.follower_state == 'DIVING':
+            rc_msg = OverrideRCIn()
+            rc_msg.channels = [65535] * 18
+            rc_msg.channels[2] = 1350  # Batma motorlarina guc (Derine in)
+            self.rc_pub.publish(rc_msg)
+            
+            elapsed = (now - self.dive_start_time).nanoseconds * 1e-9
+            if elapsed > 8.0 or self.alt < -1.0:
+                self.follower_state = 'FOLLOWING'
+                self.get_logger().info(f'Dalis tamamlandi (Derinlik: {self.alt:.2f}m, Sure: {elapsed:.1f}s). Rota takibi basliyor.')
+            return
 
         # ---- SIRALI ilerleme: siradaki waypoint gecildiyse indeksi artir ----
         self.advance_waypoint(x, y)
@@ -236,10 +288,11 @@ class PathFollowerNode(Node):
             if abs(heading_err) > self.align_thresh:
                 rc_msg = OverrideRCIn()
                 rc_msg.channels = [65535] * 18
+                rc_msg.channels[2] = 1500  # Depth hold neutral
                 rc_msg.channels[4] = 1500  # Forward neutral
                 
                 w = max(-self.w_max, min(self.w_max, self.k_heading * heading_err))
-                pwm_yaw = int(1500 + (w / self.w_max) * 400) if self.w_max > 0 else 1500
+                pwm_yaw = int(1500 - (w / self.w_max) * 400) if self.w_max > 0 else 1500
                 rc_msg.channels[3] = max(1100, min(1900, pwm_yaw))
                 
                 self.rc_pub.publish(rc_msg)
@@ -254,6 +307,7 @@ class PathFollowerNode(Node):
 
         rc_msg = OverrideRCIn()
         rc_msg.channels = [65535] * 18
+        rc_msg.channels[2] = 1500  # Derinligi korumasi (Depth Hold) icin throttle'i notr tut
 
         if abs(heading_err) > self.rotate_thresh:
             v = 0.0
@@ -272,7 +326,7 @@ class PathFollowerNode(Node):
                 v = max(self.v_min * 0.5, v * scale)
 
         pwm_fwd = int(1500 + (v / self.v_max) * 400) if self.v_max > 0 else 1500
-        pwm_yaw = int(1500 + (w / self.w_max) * 400) if self.w_max > 0 else 1500
+        pwm_yaw = int(1500 - (w / self.w_max) * 400) if self.w_max > 0 else 1500
 
         rc_msg.channels[4] = max(1100, min(1900, pwm_fwd))
         rc_msg.channels[3] = max(1100, min(1900, pwm_yaw))
@@ -373,6 +427,7 @@ class PathFollowerNode(Node):
         if not self.stopped_published:
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
+            rc_msg.channels[2] = 1500  # Throttle neutral (hold depth)
             rc_msg.channels[3] = 1500  # Yaw neutral
             rc_msg.channels[4] = 1500  # Forward neutral
             self.rc_pub.publish(rc_msg)

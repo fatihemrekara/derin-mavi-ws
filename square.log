@@ -1,0 +1,51 @@
+nohup: ignoring input
+[INFO] [1786738451.669693558] [square_route_planner]: Square route planner hazir. (r=2.0 m, step=0.5 m, frame=map)
+[INFO] [1786738451.670792420] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786738451.671204430] [square_route_planner]: Donus yonu secildi: CW (Saat yonu)
+[INFO] [1786738451.671632092] [square_route_planner]: Kare cizildi. Cikis kosesi bulundu: Index 3
+[INFO] [1786738451.673650120] [square_route_planner]: Rota yayinlandi: 61 waypoint, toplam 29.62 m.
+[INFO] [1786738454.458697573] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786738454.459150941] [square_route_planner]: Donus yonu secildi: CW (Saat yonu)
+[INFO] [1786738454.459583803] [square_route_planner]: Kare cizildi. Cikis kosesi bulundu: Index 3
+[INFO] [1786738454.461573695] [square_route_planner]: Rota yayinlandi: 61 waypoint, toplam 29.62 m.
+[INFO] [1786738560.919588435] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786738560.920081598] [square_route_planner]: Donus yonu secildi: CW (Saat yonu)
+[INFO] [1786738560.920558968] [square_route_planner]: Kare cizildi. Cikis kosesi bulundu: Index 3
+[INFO] [1786738560.922648115] [square_route_planner]: Rota yayinlandi: 61 waypoint, toplam 29.62 m.
+[INFO] [1786739062.653708719] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786739062.654367525] [square_route_planner]: Donus yonu secildi: CW (Saat yonu)
+[INFO] [1786739062.654984768] [square_route_planner]: Kare cizildi. Cikis kosesi bulundu: Index 3
+[INFO] [1786739062.657292340] [square_route_planner]: Rota yayinlandi: 61 waypoint, toplam 29.62 m.
+Traceback (most recent call last):
+  File "/home/femre/ros-ws/src/zed_pose_test/zed_pose_test/square_route_planner.py", line 226, in main
+    
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 247, in spin
+    executor.spin_once()
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 926, in spin_once
+    self._spin_once_impl(timeout_sec)
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 907, in _spin_once_impl
+    handler, entity, node = self.wait_for_ready_callbacks(
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 877, in wait_for_ready_callbacks
+    return next(self._cb_iter)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 785, in _wait_for_ready_callbacks
+    raise ExternalShutdownException()
+rclpy.executors.ExternalShutdownException
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/femre/ros-ws/src/zed_pose_test/zed_pose_test/square_route_planner.py", line 234, in <module>
+    # Rotayi uret
+^^^^^^
+  File "/home/femre/ros-ws/src/zed_pose_test/zed_pose_test/square_route_planner.py", line 231, in main
+    self.square_corners = [get_square_point(buoy, r, beta, beta + a) 
+    ^^^^^^^^^^^^^^^^
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 134, in shutdown
+    _shutdown(context=context)
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/utilities.py", line 82, in shutdown
+    context.shutdown()
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/context.py", line 129, in shutdown
+    self.__context.shutdown()
+rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:333

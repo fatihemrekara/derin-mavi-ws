@@ -1,0 +1,32 @@
+nohup: ignoring input
+[INFO] [1786741250.313463054] [square_route_planner]: Square route planner (Tam Tur Merkezli) hazir. (r=2.0 m, step=0.5)
+[INFO] [1786741250.314871896] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, 5.0), B=(5.0, -5.0). Rota hesaplaniyor...
+[INFO] [1786741250.315453034] [square_route_planner]: Sanal Cember Yayi (Tam Tur): 630.0 derece, donus saat yonu (CW)
+[INFO] [1786741250.318822428] [square_route_planner]: Rota yayinlandi: 83 waypoint, toplam 43.83 m.
+[INFO] [1786741250.393904975] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[WARN] [1786741250.394438121] [square_route_planner]: Giris tegeti: ref merkezde
+[WARN] [1786741250.395024558] [square_route_planner]: Cikis tegeti: ref merkezde
+[INFO] [1786741250.395808618] [square_route_planner]: Sanal Cember Yayi (Tam Tur): 360.0 derece, donus saat yonu tersi (CCW)
+[INFO] [1786741250.400283765] [square_route_planner]: Rota yayinlandi: 88 waypoint, toplam 44.05 m.
+[INFO] [1786741320.656013316] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, 5.0), B=(5.0, -5.0). Rota hesaplaniyor...
+[INFO] [1786741320.656769677] [square_route_planner]: Sanal Cember Yayi (Tam Tur): 630.0 derece, donus saat yonu (CW)
+[INFO] [1786741320.659751709] [square_route_planner]: Rota yayinlandi: 83 waypoint, toplam 43.83 m.
+[INFO] [1786741470.576487559] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786741470.577003647] [square_route_planner]: Sanal Cember Yayi (Tam Tur): 630.0 derece, donus saat yonu tersi (CCW)
+[INFO] [1786741470.579698956] [square_route_planner]: Rota yayinlandi: 94 waypoint, toplam 48.70 m.
+[INFO] [1786741541.596159981] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[WARN] [1786741541.596839811] [square_route_planner]: Giris tegeti: ref merkezde
+[WARN] [1786741541.597577960] [square_route_planner]: Cikis tegeti: ref merkezde
+[INFO] [1786741541.598064022] [square_route_planner]: Sanal Cember Yayi (Tam Tur): 360.0 derece, donus saat yonu tersi (CCW)
+[INFO] [1786741541.600897553] [square_route_planner]: Rota yayinlandi: 88 waypoint, toplam 44.05 m.
+[INFO] [1786741670.687033322] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786741670.687554701] [square_route_planner]: Sanal Cember Yayi (Tam Tur): 630.0 derece, donus saat yonu tersi (CCW)
+[INFO] [1786741670.690161824] [square_route_planner]: Rota yayinlandi: 94 waypoint, toplam 48.70 m.
+[INFO] [1786741690.838447382] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, 5.0), B=(5.0, -5.0). Rota hesaplaniyor...
+[INFO] [1786741690.839419796] [square_route_planner]: Sanal Cember Yayi (Tam Tur): 630.0 derece, donus saat yonu (CW)
+[INFO] [1786741690.843518298] [square_route_planner]: Rota yayinlandi: 83 waypoint, toplam 43.83 m.
+[INFO] [1786741704.757278118] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[WARN] [1786741704.758424364] [square_route_planner]: Giris tegeti: ref merkezde
+[WARN] [1786741704.759351578] [square_route_planner]: Cikis tegeti: ref merkezde
+[INFO] [1786741704.760208433] [square_route_planner]: Sanal Cember Yayi (Tam Tur): 360.0 derece, donus saat yonu tersi (CCW)
+[INFO] [1786741704.763737322] [square_route_planner]: Rota yayinlandi: 88 waypoint, toplam 44.05 m.

@@ -1,0 +1,92 @@
+nohup: ignoring input
+[INFO] [1786740342.211882519] [square_route_planner]: Square route planner hazir. (r=2.0 m, step=0.5 m, frame=map)
+[INFO] [1786740342.213090985] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[INFO] [1786740342.213601041] [square_route_planner]: Donus yonu secildi: CCW (Saat yonu tersi)
+[INFO] [1786740342.214152986] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 3 (Hesaplanan Yay: 196.3°)
+[INFO] [1786740342.214755657] [square_route_planner]: Cikis kosesi bulundu: Index 3
+[INFO] [1786740342.217411095] [square_route_planner]: Rota yayinlandi: 78 waypoint, toplam 36.61 m.
+[INFO] [1786740342.661314995] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[INFO] [1786740342.661933377] [square_route_planner]: Donus yonu secildi: CCW (Saat yonu tersi)
+[INFO] [1786740342.662763395] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 3 (Hesaplanan Yay: 196.3°)
+[INFO] [1786740342.663626530] [square_route_planner]: Cikis kosesi bulundu: Index 3
+[INFO] [1786740342.666787696] [square_route_planner]: Rota yayinlandi: 78 waypoint, toplam 36.61 m.
+[INFO] [1786740434.408863910] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, 5.0), B=(5.0, -5.0). Rota hesaplaniyor...
+[INFO] [1786740434.409410181] [square_route_planner]: Donus yonu secildi: CCW (Saat yonu tersi)
+[INFO] [1786740434.409931377] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 2 (Hesaplanan Yay: 163.0°)
+[INFO] [1786740434.410537314] [square_route_planner]: Cikis kosesi bulundu: Index 2
+[INFO] [1786740434.412596176] [square_route_planner]: Rota yayinlandi: 49 waypoint, toplam 23.84 m.
+[INFO] [1786740585.872997993] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, 5.0), B=(5.0, -5.0). Rota hesaplaniyor...
+[INFO] [1786740585.873488468] [square_route_planner]: Donus yonu secildi: CCW (Saat yonu tersi)
+[INFO] [1786740585.873952130] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 2 (Hesaplanan Yay: 163.0°)
+[INFO] [1786740585.874505508] [square_route_planner]: Cikis kosesi bulundu: Index 2
+[INFO] [1786740585.876395890] [square_route_planner]: Rota yayinlandi: 49 waypoint, toplam 23.84 m.
+[INFO] [1786740603.950592974] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786740603.951128991] [square_route_planner]: Donus yonu secildi: CW (Saat yonu)
+[INFO] [1786740603.951626119] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 2 (Hesaplanan Yay: 159.1°)
+[INFO] [1786740603.952195643] [square_route_planner]: Cikis kosesi bulundu: Index 2
+[INFO] [1786740603.954312906] [square_route_planner]: Rota yayinlandi: 59 waypoint, toplam 28.72 m.
+[INFO] [1786740761.525062556] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[INFO] [1786740761.525729496] [square_route_planner]: Donus yonu secildi: CCW (Saat yonu tersi)
+[INFO] [1786740761.526360322] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 3 (Hesaplanan Yay: 196.3°)
+[INFO] [1786740761.527032973] [square_route_planner]: Cikis kosesi bulundu: Index 3
+[INFO] [1786740761.529766115] [square_route_planner]: Rota yayinlandi: 78 waypoint, toplam 36.61 m.
+[INFO] [1786740820.680939305] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786740820.681876031] [square_route_planner]: Donus yonu secildi: CW (Saat yonu)
+[INFO] [1786740820.682850061] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 2 (Hesaplanan Yay: 159.1°)
+[INFO] [1786740820.683942603] [square_route_planner]: Cikis kosesi bulundu: Index 2
+[INFO] [1786740820.687778725] [square_route_planner]: Rota yayinlandi: 59 waypoint, toplam 28.72 m.
+[INFO] [1786740863.490266958] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786740863.491349101] [square_route_planner]: Donus yonu secildi: CW (Saat yonu)
+[INFO] [1786740863.492295754] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 2 (Hesaplanan Yay: 159.1°)
+[INFO] [1786740863.493185012] [square_route_planner]: Cikis kosesi bulundu: Index 2
+[INFO] [1786740863.496072799] [square_route_planner]: Rota yayinlandi: 59 waypoint, toplam 28.72 m.
+[INFO] [1786740943.912063328] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786740943.912648561] [square_route_planner]: Donus yonu secildi: CW (Saat yonu)
+[INFO] [1786740943.913188753] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 2 (Hesaplanan Yay: 159.1°)
+[INFO] [1786740943.913785546] [square_route_planner]: Cikis kosesi bulundu: Index 2
+[INFO] [1786740943.916329162] [square_route_planner]: Rota yayinlandi: 59 waypoint, toplam 28.72 m.
+[INFO] [1786741027.788408933] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786741027.789135812] [square_route_planner]: Donus yonu secildi: CW (Saat yonu)
+[INFO] [1786741027.789853400] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 2 (Hesaplanan Yay: 159.1°)
+[INFO] [1786741027.790810442] [square_route_planner]: Cikis kosesi bulundu: Index 2
+[INFO] [1786741027.793056079] [square_route_planner]: Rota yayinlandi: 59 waypoint, toplam 28.72 m.
+[INFO] [1786741049.881554004] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, 5.0), B=(5.0, -5.0). Rota hesaplaniyor...
+[INFO] [1786741049.882068523] [square_route_planner]: Donus yonu secildi: CCW (Saat yonu tersi)
+[INFO] [1786741049.882633606] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 2 (Hesaplanan Yay: 163.0°)
+[INFO] [1786741049.883206558] [square_route_planner]: Cikis kosesi bulundu: Index 2
+[INFO] [1786741049.885073034] [square_route_planner]: Rota yayinlandi: 49 waypoint, toplam 23.84 m.
+[INFO] [1786741250.432357585] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[INFO] [1786741250.433209725] [square_route_planner]: Donus yonu secildi: CCW (Saat yonu tersi)
+[INFO] [1786741250.434052753] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 3 (Hesaplanan Yay: 196.3°)
+[INFO] [1786741250.434832367] [square_route_planner]: Cikis kosesi bulundu: Index 3
+[INFO] [1786741250.437935165] [square_route_planner]: Rota yayinlandi: 78 waypoint, toplam 36.61 m.
+[INFO] [1786741320.655956300] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, 5.0), B=(5.0, -5.0). Rota hesaplaniyor...
+[INFO] [1786741320.657012924] [square_route_planner]: Donus yonu secildi: CCW (Saat yonu tersi)
+[INFO] [1786741320.658338372] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 2 (Hesaplanan Yay: 163.0°)
+[INFO] [1786741320.659294072] [square_route_planner]: Cikis kosesi bulundu: Index 2
+[INFO] [1786741320.661472386] [square_route_planner]: Rota yayinlandi: 49 waypoint, toplam 23.84 m.
+[INFO] [1786741470.576532580] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786741470.577243073] [square_route_planner]: Donus yonu secildi: CW (Saat yonu)
+[INFO] [1786741470.577927443] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 2 (Hesaplanan Yay: 159.1°)
+[INFO] [1786741470.578551903] [square_route_planner]: Cikis kosesi bulundu: Index 2
+[INFO] [1786741470.580794124] [square_route_planner]: Rota yayinlandi: 59 waypoint, toplam 28.72 m.
+[INFO] [1786741541.595901912] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[INFO] [1786741541.596452155] [square_route_planner]: Donus yonu secildi: CCW (Saat yonu tersi)
+[INFO] [1786741541.597201012] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 3 (Hesaplanan Yay: 196.3°)
+[INFO] [1786741541.597788810] [square_route_planner]: Cikis kosesi bulundu: Index 3
+[INFO] [1786741541.600774992] [square_route_planner]: Rota yayinlandi: 78 waypoint, toplam 36.61 m.
+[INFO] [1786741670.793628172] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786741670.794765532] [square_route_planner]: Donus yonu secildi: CW (Saat yonu)
+[INFO] [1786741670.795612388] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 2 (Hesaplanan Yay: 159.1°)
+[INFO] [1786741670.796459821] [square_route_planner]: Cikis kosesi bulundu: Index 2
+[INFO] [1786741670.799098642] [square_route_planner]: Rota yayinlandi: 59 waypoint, toplam 28.72 m.
+[INFO] [1786741690.727203998] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, 5.0), B=(5.0, -5.0). Rota hesaplaniyor...
+[INFO] [1786741690.727779023] [square_route_planner]: Donus yonu secildi: CCW (Saat yonu tersi)
+[INFO] [1786741690.728385723] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 2 (Hesaplanan Yay: 163.0°)
+[INFO] [1786741690.729015310] [square_route_planner]: Cikis kosesi bulundu: Index 2
+[INFO] [1786741690.731079627] [square_route_planner]: Rota yayinlandi: 49 waypoint, toplam 23.84 m.
+[INFO] [1786741704.644288884] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[INFO] [1786741704.645235930] [square_route_planner]: Donus yonu secildi: CCW (Saat yonu tersi)
+[INFO] [1786741704.645969379] [square_route_planner]: Matematiksel Zorunlu Kose Gecisi (Min Corners): 3 (Hesaplanan Yay: 196.3°)
+[INFO] [1786741704.646797600] [square_route_planner]: Cikis kosesi bulundu: Index 3
+[INFO] [1786741704.649896786] [square_route_planner]: Rota yayinlandi: 78 waypoint, toplam 36.61 m.
