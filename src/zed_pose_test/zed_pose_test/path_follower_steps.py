@@ -44,7 +44,7 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPo
 
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, Point
-from mavros_msgs.msg import OverrideRCIn, VFR_HUD
+from mavros_msgs.msg import OverrideRCIn, VfrHud
 from mavros_msgs.srv import CommandBool, SetMode
 from visualization_msgs.msg import Marker, MarkerArray
 
@@ -128,7 +128,7 @@ class PathFollowerNode(Node):
         self.pose_sub = self.create_subscription(
             PoseStamped, str(gp('pose_topic')), self.on_pose, sensor_qos)
         self.vfr_sub = self.create_subscription(
-            VFR_HUD, '/mavros/vfr_hud', self.on_vfr, sensor_qos)
+            VfrHud, '/mavros/vfr_hud', self.on_vfr, sensor_qos)
 
         self.arm_client = self.create_client(CommandBool, '/mavros/cmd/arming')
         self.mode_client = self.create_client(SetMode, '/mavros/set_mode')
@@ -178,7 +178,7 @@ class PathFollowerNode(Node):
             self.follower_state = 'ARMING'
             self.get_logger().info('Arm ve Dalis islemi baslatilacak (Sirali takip icin).')
 
-    def on_vfr(self, msg: VFR_HUD):
+    def on_vfr(self, msg: VfrHud):
         self.alt = msg.altitude
 
     def on_pose(self, msg: PoseStamped):
