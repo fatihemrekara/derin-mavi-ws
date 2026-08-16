@@ -47,6 +47,7 @@ setup(
             'MiniRov_cam = zed_pose_test.MiniRov_cam:main',
             'path_follower_steps = zed_pose_test.path_follower_steps:main',
             'station_gui = zed_pose_test.station_gui:main',
+            'return_route_planner = zed_pose_test.return_route_planner:main',
         ],
     },
 )
