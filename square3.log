@@ -63,3 +63,37 @@ nohup: ignoring input
 [INFO] [1786741704.756858862] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
 [INFO] [1786741704.757709490] [square_route_planner]: Sanal Cember Yayi: 196.3 derece, donus saat yonu tersi (CCW)
 [INFO] [1786741704.761192576] [square_route_planner]: Rota yayinlandi: 76 waypoint, toplam 36.57 m.
+Traceback (most recent call last):
+  File "/home/femre/ros-ws/install/zed_pose_test/lib/python3.12/site-packages/zed_pose_test/square_route_planner.py", line 332, in main
+    ma.markers.append(m)
+^^^^^^^^^^^^^^^^
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 247, in spin
+    executor.spin_once()
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 926, in spin_once
+    self._spin_once_impl(timeout_sec)
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 907, in _spin_once_impl
+    handler, entity, node = self.wait_for_ready_callbacks(
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 877, in wait_for_ready_callbacks
+    return next(self._cb_iter)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 785, in _wait_for_ready_callbacks
+    raise ExternalShutdownException()
+rclpy.executors.ExternalShutdownException
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/femre/ros-ws/install/zed_pose_test/lib/zed_pose_test/square_route_planner", line 33, in <module>
+    sys.exit(load_entry_point('zed-pose-test==0.0.0', 'console_scripts', 'square_route_planner')())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/femre/ros-ws/install/zed_pose_test/lib/python3.12/site-packages/zed_pose_test/square_route_planner.py", line 337, in main
+    def main(args=None):
+            ^^^^^^^^^^^^^
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 134, in shutdown
+    _shutdown(context=context)
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/utilities.py", line 82, in shutdown
+    context.shutdown()
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/context.py", line 129, in shutdown
+    self.__context.shutdown()
+rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:333
