@@ -48,6 +48,7 @@ setup(
             'path_follower_steps = zed_pose_test.path_follower_steps:main',
             'station_gui = zed_pose_test.station_gui:main',
             'return_route_planner = zed_pose_test.return_route_planner:main',
+            'sensor_comparison_logger = zed_pose_test.sensor_comparison_logger:main',
         ],
     },
 )

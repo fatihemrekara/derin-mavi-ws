@@ -242,13 +242,7 @@ class PathFollowerNode(Node):
             return
             
         elif self.follower_state == 'ARMING':
-            # Modu Depth Hold (ALT_HOLD) yapiyoruz
-            if self.mode_client.wait_for_service(timeout_sec=1.0):
-                req = SetMode.Request()
-                req.custom_mode = 'ALT_HOLD'
-                self.mode_client.call_async(req)
-                
-            # Araci arm ediyoruz
+            # Önce varsayilan modda (ornegin MANUAL) arm ediyoruz
             if self.arm_client.wait_for_service(timeout_sec=1.0):
                 req = CommandBool.Request()
                 req.value = True
@@ -256,21 +250,27 @@ class PathFollowerNode(Node):
                 
             self.follower_state = 'DIVING'
             self.dive_start_time = now
-            self.get_logger().info('ALT_HOLD moduna alindi ve Arm edildi. Dalis basliyor (PWM 1350)...')
+            self.get_logger().info('Araç Arm edildi. Dalis basliyor (1 metreye indikten sonra ALT_HOLD acilacak).')
             return
             
         elif self.follower_state == 'DIVING':
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
-            rc_msg.channels[2] = 1440  # Motor gucu cok yavas dalis icin duzenlendi (onceki 1430, en basta 1350)
+            rc_msg.channels[2] = 1400  # 1 metreye rahat ulasabilmesi icin 1440'tan 1400'e guc artirildi
             self.rc_pub.publish(rc_msg)
             
             elapsed = (now - self.dive_start_time).nanoseconds * 1e-9
             
             # rel_alt degerini de ekledik (bu deger negatif yonlu derinligi belirtir). 
             if elapsed > 15.0 or self.rel_alt < -1.0 or self.alt < -1.0 or self.pose_z < -1.0:
+                # Modu Depth Hold (ALT_HOLD) yapiyoruz
+                if self.mode_client.wait_for_service(timeout_sec=1.0):
+                    req = SetMode.Request()
+                    req.custom_mode = 'ALT_HOLD'
+                    self.mode_client.call_async(req)
+
                 self.follower_state = 'FOLLOWING'
-                self.get_logger().info(f'Dalis tamamlandi (Derinlik: {self.rel_alt:.2f}m, local_z: {self.pose_z:.2f}m, Sure: {elapsed:.1f}s). Rota takibi basliyor.')
+                self.get_logger().info(f'Dalis tamamlandi (Derinlik: {self.rel_alt:.2f}m, Sure: {elapsed:.1f}s). ALT_HOLD moduna gecildi. Rota takibi basliyor.')
             return
 
         # ---- SIRALI ilerleme: siradaki waypoint gecildiyse indeksi artir ----
