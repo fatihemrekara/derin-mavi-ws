@@ -74,16 +74,24 @@ class CompassDiveLogger(Node):
                 
         elif self.state == 'ARMING':
             # Aracı MANUAL moda alıp Arm edelim
-            if self.mode_client.wait_for_service(timeout_sec=0.1):
-                req = SetMode.Request()
-                req.custom_mode = 'MANUAL'
-                self.mode_client.call_async(req)
-                
-            if self.arm_client.wait_for_service(timeout_sec=0.1):
-                req = CommandBool.Request()
-                req.value = True
-                self.arm_client.call_async(req)
+            if elapsed < 0.2:
+                if self.mode_client.wait_for_service(timeout_sec=0.5):
+                    req = SetMode.Request()
+                    req.custom_mode = 'MANUAL'
+                    self.mode_client.call_async(req)
+                if self.arm_client.wait_for_service(timeout_sec=0.5):
+                    req = CommandBool.Request()
+                    req.value = True
+                    self.arm_client.call_async(req)
             
+            # Guvenlik icin bos PWM gonderelim
+            rc = OverrideRCIn()
+            rc.channels = [65535] * 18
+            rc.channels[2] = 1500
+            rc.channels[3] = 1500
+            rc.channels[4] = 1500
+            self.rc_pub.publish(rc)
+
             if elapsed > 2.0:
                 self.change_state('DIVING')
                 
@@ -118,17 +126,19 @@ class CompassDiveLogger(Node):
                 
         elif self.state == 'STOPPING_MOTORS':
             # Batıp 5 saniye bekledikten sonra araci yuzeye cikarmak veya motoru durdurmak icin Disarm edelim
-            if self.arm_client.wait_for_service(timeout_sec=0.1):
-                req = CommandBool.Request()
-                req.value = False  # DISARM - Pervaneler tamamen durur
-                self.arm_client.call_async(req)
+            if elapsed < 0.2:
+                if self.arm_client.wait_for_service(timeout_sec=0.5):
+                    req = CommandBool.Request()
+                    req.value = False  # DISARM - Pervaneler tamamen durur
+                    self.arm_client.call_async(req)
                 
             # RC sinyallerini de tamamen bosta (65535) birakalim
             rc = OverrideRCIn()
             rc.channels = [65535] * 18
             self.rc_pub.publish(rc)
             
-            self.change_state('SURFACING_AND_LOGGING')
+            if elapsed > 1.0:
+                self.change_state('SURFACING_AND_LOGGING')
             
         elif self.state == 'SURFACING_AND_LOGGING':
             # Arac bu evrede motoru durdurulmus sekilde (veya DISARM edildigi icin) 
@@ -145,9 +155,12 @@ def main(args=None):
         pass
     finally:
         node.get_logger().info("Test durduruluyor, RC kanallari temizleniyor...")
-        rc = OverrideRCIn()
-        rc.channels = [65535] * 18
-        node.rc_pub.publish(rc)
+        try:
+            rc = OverrideRCIn()
+            rc.channels = [65535] * 18
+            node.rc_pub.publish(rc)
+        except Exception:
+            pass
         node.log_file.close()
         node.destroy_node()
         rclpy.shutdown()
