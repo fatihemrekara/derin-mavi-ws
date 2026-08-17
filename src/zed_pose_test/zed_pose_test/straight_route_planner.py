@@ -52,27 +52,48 @@ class StraightRoutePlannerNode(Node):
         self.path_pub = self.create_publisher(Path, 'planned_route', latched)
         self.marker_pub = self.create_publisher(MarkerArray, 'route_markers', latched)
         
-        # Aracın o anki pozunu almak için bir kerelik dinleyici
+        # Aracın o anki pozunu almak için (2 saniye bekleme eklendi)
         self.pose_sub = self.create_subscription(PoseStamped, self.pose_topic, self.on_pose, sensor_qos)
         
         self.route_published = False
+        self.pose_samples = []
+        self.sampling_start_time = None
+        self.sampling_duration = 2.0  # saniye
 
         self.get_logger().info(
-            f'Dinamik Düz Rota Planlayici basladi. Aracın pozu bekleniyor... '
+            f'Dinamik Düz Rota Planlayici basladi. İlk {self.sampling_duration} saniye veri toplanacak... '
             f'(Topic: {self.pose_topic}, Uzunluk={self.length} m)')
 
     def on_pose(self, msg: PoseStamped):
         if self.route_published:
             return  # Rota 1 kere yayınlanır
             
-        x0 = msg.pose.position.x
-        y0 = msg.pose.position.y
-        yaw0 = quat_to_yaw(msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w)
+        now = self.get_clock().now()
+        if self.sampling_start_time is None:
+            self.sampling_start_time = now
+            self.get_logger().info(f'[{self.get_name()}] Başlangıç pozisyonu için {self.sampling_duration} saniye dinleniyor...')
+            
+        elapsed = (now - self.sampling_start_time).nanoseconds * 1e-9
         
-        self.get_logger().info(f"Aracın başlangıç pozu alındı: X={x0:.2f}, Y={y0:.2f}, Yaw={math.degrees(yaw0):.1f} derece; ")
-        self.publish_route(x0, y0, yaw0)
+        yaw = quat_to_yaw(msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w)
+        self.pose_samples.append((msg.pose.position.x, msg.pose.position.y, yaw))
         
-        self.route_published = True
+        if elapsed >= self.sampling_duration:
+            if not self.pose_samples:
+                return
+            
+            x0 = sum(p[0] for p in self.pose_samples) / len(self.pose_samples)
+            y0 = sum(p[1] for p in self.pose_samples) / len(self.pose_samples)
+            
+            # Açıların aritmetik ortalaması yerine vektörel ortalaması (atan2)
+            sum_sin = sum(math.sin(p[2]) for p in self.pose_samples)
+            sum_cos = sum(math.cos(p[2]) for p in self.pose_samples)
+            yaw0 = math.atan2(sum_sin, sum_cos)
+            
+            self.get_logger().info(f"Aracın başlangıç pozu SABİTLENDİ (Ortalama): X={x0:.2f}, Y={y0:.2f}, Yaw={math.degrees(yaw0):.1f} derece;")
+            self.publish_route(x0, y0, yaw0)
+            
+            self.route_published = True
 
     def publish_route(self, start_x, start_y, yaw):
         pts = []

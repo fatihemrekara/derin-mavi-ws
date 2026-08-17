@@ -120,7 +120,7 @@ class CompassForwardLogger(Node):
             rc.channels = [65535] * 18
             rc.channels[2] = 1500  # Derinlik koruma (throttle=1500)
             rc.channels[3] = 1500  # Yaw neutral
-            rc.channels[4] = 1600  # Ileri hareket PWM (Fwd = 1600)
+            rc.channels[4] = 1750  # Ileri hareket PWM (Fwd = 1600)
             self.rc_pub.publish(rc)
             
             if elapsed > 5.0:

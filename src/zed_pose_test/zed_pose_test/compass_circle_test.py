@@ -118,7 +118,7 @@ class CompassCircleLogger(Node):
             rc.channels = [65535] * 18
             rc.channels[2] = 1500  # Derinlik koruma (throttle=1500)
             rc.channels[3] = 1500  # Yaw neutral
-            rc.channels[4] = 1600  # Ileri hareket (Fwd = 1600)
+            rc.channels[4] = 1750  # Ileri hareket (Fwd = 1600)
             self.rc_pub.publish(rc)
             
             if elapsed > 5.0:
@@ -132,8 +132,8 @@ class CompassCircleLogger(Node):
             rc = OverrideRCIn()
             rc.channels = [65535] * 18
             rc.channels[2] = 1500 
-            rc.channels[3] = 1600  # Yaw (Sağa dönüş itkisi)
-            rc.channels[4] = 1600  # Fwd (İleri itkisi)
+            rc.channels[3] = 1630  # Yaw (Sağa dönüş itkisi)
+            rc.channels[4] = 1670  # Fwd (İleri itkisi)
             self.rc_pub.publish(rc)
             
             # Cember cizmesi icin ~15 saniye bu sekilde donsun (1 tam tura yakin bir egri olusturmasi icin)
