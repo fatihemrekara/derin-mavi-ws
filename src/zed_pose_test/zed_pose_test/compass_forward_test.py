@@ -34,12 +34,14 @@ class CompassForwardLogger(Node):
         self.state_start_time = self.get_clock().now()
         
         # Log dosyasina yazmak icin CSV açıyoruz
-        self.log_file = open('/tmp/compass_forward_log.csv', 'w')
+        import os
+        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'compass_forward_log.csv')
+        self.log_file = open(log_path, 'w')
         self.log_file.write("Time(s),State,RelAlt(m),Compass_Hdg(deg)\n")
         
         self.timer = self.create_timer(0.1, self.control_loop)
         self.get_logger().info("Compass Forward Logger scripti baslatildi.")
-        self.get_logger().info("Loglar /tmp/compass_forward_log.csv dosyasina kaydediliyor...")
+        self.get_logger().info(f"Loglar {log_path} dosyasina kaydediliyor...")
         
     def hdg_cb(self, msg):
         self.compass_hdg = msg.data
@@ -77,7 +79,7 @@ class CompassForwardLogger(Node):
             if elapsed < 0.2:
                 if self.mode_client.wait_for_service(timeout_sec=0.5):
                     req = SetMode.Request()
-                    req.custom_mode = 'MANUAL'
+                    req.custom_mode = 'ALT_HOLD'
                     self.mode_client.call_async(req)
                 if self.arm_client.wait_for_service(timeout_sec=0.5):
                     req = CommandBool.Request()
