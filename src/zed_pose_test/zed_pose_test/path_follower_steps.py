@@ -42,6 +42,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
 
+from std_msgs.msg import Float64
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, Point
 from mavros_msgs.msg import OverrideRCIn, VfrHud
@@ -103,6 +104,7 @@ class PathFollowerNode(Node):
         self.path_frame = 'map'
         self.wp_idx = 0            # SIRADAKI waypoint (sadece gecilince artar)
         self.pose = None
+        self.pose_z = 0.0
         self.last_pose_time = None
         self.goal_reached = False
         self.startup_aligned = False
@@ -136,6 +138,10 @@ class PathFollowerNode(Node):
         self.follower_state = 'WAITING_FOR_PATH'
         self.dive_start_time = None
         self.alt = 0.0
+        self.rel_alt = 0.0  # Ekledigimiz rel_alt (std_msgs/Float64)
+
+        self.rel_alt_sub = self.create_subscription(
+            Float64, '/mavros/global_position/rel_alt', self.on_rel_alt, sensor_qos)
 
         self.rc_pub = self.create_publisher(OverrideRCIn, str(gp('rc_override_topic')), 10)
         self.stopped_published = False
@@ -181,9 +187,13 @@ class PathFollowerNode(Node):
     def on_vfr(self, msg: VfrHud):
         self.alt = msg.altitude
 
+    def on_rel_alt(self, msg: Float64):
+        self.rel_alt = msg.data
+
     def on_pose(self, msg: PoseStamped):
         p = msg.pose.position
         o = msg.pose.orientation
+        self.pose_z = p.z  # Ekledik: Lokal (EKF) frame'inde z derinligi
         yaw = normalize_angle(quat_to_yaw(o.x, o.y, o.z, o.w) + self.yaw_offset)
         if abs(self.yaw_offset) > 1e-9:
             c, s = math.cos(self.yaw_offset), math.sin(self.yaw_offset)
@@ -252,13 +262,15 @@ class PathFollowerNode(Node):
         elif self.follower_state == 'DIVING':
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
-            rc_msg.channels[2] = 1350  # Batma motorlarina guc (Derine in)
+            rc_msg.channels[2] = 1440  # Motor gucu cok yavas dalis icin duzenlendi (onceki 1430, en basta 1350)
             self.rc_pub.publish(rc_msg)
             
             elapsed = (now - self.dive_start_time).nanoseconds * 1e-9
-            if elapsed > 8.0 or self.alt < -1.0:
+            
+            # rel_alt degerini de ekledik (bu deger negatif yonlu derinligi belirtir). 
+            if elapsed > 15.0 or self.rel_alt < -1.0 or self.alt < -1.0 or self.pose_z < -1.0:
                 self.follower_state = 'FOLLOWING'
-                self.get_logger().info(f'Dalis tamamlandi (Derinlik: {self.alt:.2f}m, Sure: {elapsed:.1f}s). Rota takibi basliyor.')
+                self.get_logger().info(f'Dalis tamamlandi (Derinlik: {self.rel_alt:.2f}m, local_z: {self.pose_z:.2f}m, Sure: {elapsed:.1f}s). Rota takibi basliyor.')
             return
 
         # ---- SIRALI ilerleme: siradaki waypoint gecildiyse indeksi artir ----
