@@ -44,7 +44,9 @@ class EkfSensorEvaluation(Node):
         
         self.state_start_time = self.get_clock().now()
         
-        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ekf_sensor_evaluation_log.csv')
+        from datetime import datetime
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'ekf_sensor_evaluation_log_{stamp}.csv')
         self.log_file = open(log_path, 'w')
         self.log_file.write("Time(s),State,RelAlt(m),Compass_Hdg(deg),EKF_X,EKF_Y,EKF_Z,ZED_X,ZED_Y,ZED_Z,IMU_AccX,IMU_AccY,IMU_AccZ\n")
         

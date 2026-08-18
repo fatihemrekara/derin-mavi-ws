@@ -35,7 +35,9 @@ class CompassDiveLogger(Node):
         
         # Log dosyasina yazmak icin CSV açıyoruz
         import os
-        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'compass_dive_log.csv')
+        from datetime import datetime
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'compass_dive_log_{stamp}.csv')
         self.log_file = open(log_path, 'w')
         self.log_file.write("Time(s),State,RelAlt(m),Compass_Hdg(deg)\n")
         
