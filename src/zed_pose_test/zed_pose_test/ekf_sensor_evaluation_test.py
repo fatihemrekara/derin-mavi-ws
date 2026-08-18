@@ -128,12 +128,12 @@ class EkfSensorEvaluation(Node):
         elif self.state == 'MOVING_FORWARD':
             rc = OverrideRCIn()
             rc.channels = [65535] * 18
-            rc.channels[2] = 1500  # Derinlik koruma
-            rc.channels[3] = 1500
-            rc.channels[4] = 1750  # Ileri
+            rc.channels[2] = 1500  # Derinlik koruma (Throttle)
+            rc.channels[3] = 1500  # Yaw
+            rc.channels[4] = 1800  # Ileri (Kanal 5 - Forward). Gucu artirildi.
             self.rc_pub.publish(rc)
             
-            if elapsed > 5.0:
+            if elapsed > 15.0: # 5 Saniye az geldigi icin 15 saniyeye cikarildi (Tahmini 5 metre mesafe icin)
                 self.change_state('STOPPING_MOTORS')
 
         elif self.state == 'STOPPING_MOTORS':
