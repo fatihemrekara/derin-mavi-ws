@@ -12,9 +12,9 @@ from sensor_msgs.msg import Imu
 import math
 import os
 
-class EkfSensorEvaluation(Node):
+class EkfCircleEvaluation(Node):
     def __init__(self):
-        super().__init__('ekf_sensor_evaluation')
+        super().__init__('ekf_circle_evaluation')
         
         sensor_qos = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -44,12 +44,12 @@ class EkfSensorEvaluation(Node):
         
         self.state_start_time = self.get_clock().now()
         
-        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ekf_sensor_evaluation_log.csv')
+        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ekf_circle_evaluation_log.csv')
         self.log_file = open(log_path, 'w')
         self.log_file.write("Time(s),State,RelAlt(m),Compass_Hdg(deg),EKF_X,EKF_Y,EKF_Z,ZED_X,ZED_Y,ZED_Z,IMU_AccX,IMU_AccY,IMU_AccZ\n")
         
         self.timer = self.create_timer(0.1, self.control_loop)
-        self.get_logger().info("EKF Sensor Evaluation scripti baslatildi.")
+        self.get_logger().info("EKF Circle Evaluation scripti baslatildi.")
         self.get_logger().info(f"Loglar {log_path} dosyasina kaydediliyor...")
         
     def hdg_cb(self, msg): self.compass_hdg = msg.data
@@ -139,7 +139,20 @@ class EkfSensorEvaluation(Node):
             rc.channels[4] = 1650  # Ileri (1800'den 1650'ye dusuruldu, pitch-up kalkmasini engellemek icin)
             self.rc_pub.publish(rc)
             
-            if elapsed > 15.0: # 5 Saniye az geldigi icin 15 saniyeye cikarildi (Tahmini 5 metre mesafe icin)
+            if elapsed > 10.0:
+                self.change_state('CIRCLING')
+                
+        elif self.state == 'CIRCLING':
+            rc = OverrideRCIn()
+            rc.channels = [65535] * 18
+            rc.channels[0] = 1500
+            rc.channels[1] = 1500
+            rc.channels[2] = 1500  # ALT_HOLD devrede
+            rc.channels[3] = 1580  # Hafif sağa dönüş ile çember
+            rc.channels[4] = 1620  # Yavaşça ileri gidiş
+            self.rc_pub.publish(rc)
+            
+            if elapsed > 30.0: # Daireyi tamamlaması için yeterli süre
                 self.change_state('STOPPING_MOTORS')
 
         elif self.state == 'STOPPING_MOTORS':
@@ -161,7 +174,7 @@ class EkfSensorEvaluation(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = EkfSensorEvaluation()
+    node = EkfCircleEvaluation()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
