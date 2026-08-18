@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>rovio</name>
+  <version>0.0.0</version>
+  <description>
+
+	rovio
+
+  </description>
+  <url></url>
+  <author>bloeschm</author>
+  <maintainer email="bloeschm@ethz.ch">bloeschm</maintainer>
+  <license>BSD License</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>cmake_modules</depend>
+  <depend>lightweight_filtering</depend>
+  <depend>kindr</depend>
+  <depend>rclcpp</depend>
+  <depend>roslib</depend>
+  <depend>cv_bridge</depend>
+  <depend>message_generation</depend>
+  <depend>message_runtime</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>rosbag2_cpp</depend>
+  <depend>rosbag2_storage</depend>
+  <depend>tf</depend>
+  <depend>rovio_interfaces</depend>
+  <depend>rosbag</depend>
+  <depend>yaml_cpp_catkin</depend>
+  <depend>tf2_ros</depend>
+ <export>
+ <build_type>ament_cmake</build_type>
+ </export>
+</package>

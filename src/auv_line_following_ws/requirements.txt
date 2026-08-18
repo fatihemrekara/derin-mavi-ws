@@ -1,0 +1,10 @@
+# Bu dosyadaki paketler pip ile kurulur:
+#   pip install -r requirements.txt --break-system-packages
+#
+# rclpy, cv_bridge, geometry_msgs, sensor_msgs, std_msgs gibi ROS 2
+# paketleri buraya DAHIL DEĞİLDİR; bunlar ROS 2 dağıtımınızla (Humble/
+# Iron/Jazzy) birlikte apt üzerinden kurulmalıdır.
+
+ultralytics>=8.3.0
+opencv-python-headless>=4.9.0
+numpy>=1.24.0

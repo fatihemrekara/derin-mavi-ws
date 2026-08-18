@@ -1,0 +1,20 @@
+yolo_segmentation_node:
+  ros__parameters:
+    model_path: "models/line_seg_yolo11.pt"
+    camera_topic: "/auv/camera/image_raw"
+    mask_topic: "/line_perception/segmentation_mask"
+    debug_image_topic: "/line_perception/annotated_image"
+    target_class_id: 0
+    confidence_threshold: 0.5
+    device: "cpu"
+    publish_debug_image: true
+    input_image_size: 640
+
+line_extraction_node:
+  ros__parameters:
+    mask_topic: "/line_perception/segmentation_mask"
+    line_error_topic: "/line_follower/line_error"
+    debug_image_topic: "/line_follower/debug_image"
+    min_contour_area: 150
+    lost_frame_threshold: 10
+    publish_debug_image: true

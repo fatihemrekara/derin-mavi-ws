@@ -27,16 +27,11 @@ istediginiz anda sifirlamak icin:
 import math
 import csv
 import datetime
+import tf_transformations
 
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
-
-
-def quat_to_yaw_deg(ox, oy, oz, ow):
-    siny_cosp = 2.0 * (ow * oz + ox * oy)
-    cosy_cosp = 1.0 - 2.0 * (oy * oy + oz * oz)
-    return math.degrees(math.atan2(siny_cosp, cosy_cosp))
 
 
 class ZedPoseLogger(Node):
@@ -54,7 +49,7 @@ class ZedPoseLogger(Node):
         self.csv_file = open(self.csv_path, "w", newline="")
         self.writer = csv.writer(self.csv_file)
         self.writer.writerow(["t_sec", "x_m", "y_m", "z_m",
-                              "yaw_deg", "dist_from_origin_m"])
+                              "roll_deg", "pitch_deg", "yaw_deg", "dist_from_origin_m"])
 
         self.t0 = None
         self.last_console_t = -1e9
@@ -78,11 +73,17 @@ class ZedPoseLogger(Node):
         p = msg.pose.position
         o = msg.pose.orientation
         x, y, z = p.x, p.y, p.z
-        yaw = quat_to_yaw_deg(o.x, o.y, o.z, o.w)
+        
+        # Tam roll, pitch, yaw aliniyor
+        roll, pitch, yaw_rad = tf_transformations.euler_from_quaternion([o.x, o.y, o.z, o.w])
+        yaw = math.degrees(yaw_rad)
+        roll_deg = math.degrees(roll)
+        pitch_deg = math.degrees(pitch)
+        
         dist = math.sqrt(x * x + y * y + z * z)
 
         self.writer.writerow([f"{rel_t:.3f}", f"{x:.4f}", f"{y:.4f}",
-                              f"{z:.4f}", f"{yaw:.2f}", f"{dist:.4f}"])
+                              f"{z:.4f}", f"{roll_deg:.2f}", f"{pitch_deg:.2f}", f"{yaw:.2f}", f"{dist:.4f}"])
         self.last_xyz = (x, y, z)
         self.msg_count += 1
 
@@ -90,7 +91,7 @@ class ZedPoseLogger(Node):
             self.last_console_t = rel_t
             self.get_logger().info(
                 f"[{rel_t:7.2f}s] X={x:+7.3f}m Y={y:+7.3f}m Z={z:+7.3f}m "
-                f"Yaw={yaw:+7.2f}deg |d|={dist:6.3f}m")
+                f"R={roll_deg:+7.1f} P={pitch_deg:+7.1f} Y={yaw:+7.1f}deg |d|={dist:6.3f}m")
 
     def report_and_close(self):
         self.csv_file.close()

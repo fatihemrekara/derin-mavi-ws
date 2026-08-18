@@ -1,0 +1,99 @@
+nohup: ignoring input
+[INFO] [1786739594.097918456] [square_route_planner]: Square route planner (Sanal Tegetli) hazir. (r=2.0 m, step=0.5)
+[INFO] [1786739594.099170649] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[INFO] [1786739594.099624272] [square_route_planner]: Sanal Cember Yayi: 196.3 derece, donus saat yonu tersi (CCW)
+[INFO] [1786739594.102508027] [square_route_planner]: Rota yayinlandi: 76 waypoint, toplam 36.57 m.
+[INFO] [1786739594.955319627] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[INFO] [1786739594.956095888] [square_route_planner]: Sanal Cember Yayi: 196.3 derece, donus saat yonu tersi (CCW)
+[INFO] [1786739594.959838138] [square_route_planner]: Rota yayinlandi: 76 waypoint, toplam 36.57 m.
+[INFO] [1786739673.726355216] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[INFO] [1786739673.726777068] [square_route_planner]: Sanal Cember Yayi: 196.3 derece, donus saat yonu tersi (CCW)
+[INFO] [1786739673.729130472] [square_route_planner]: Rota yayinlandi: 76 waypoint, toplam 36.57 m.
+[INFO] [1786739726.070822609] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, 5.0), B=(5.0, -5.0). Rota hesaplaniyor...
+[INFO] [1786739726.071690027] [square_route_planner]: Sanal Cember Yayi: 163.0 derece, donus saat yonu tersi (CCW)
+[INFO] [1786739726.074733658] [square_route_planner]: Rota yayinlandi: 49 waypoint, toplam 23.86 m.
+[INFO] [1786740342.662218542] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[INFO] [1786740342.662877076] [square_route_planner]: Sanal Cember Yayi: 196.3 derece, donus saat yonu tersi (CCW)
+[INFO] [1786740342.666367449] [square_route_planner]: Rota yayinlandi: 76 waypoint, toplam 36.57 m.
+[INFO] [1786740434.409172018] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, 5.0), B=(5.0, -5.0). Rota hesaplaniyor...
+[INFO] [1786740434.409738699] [square_route_planner]: Sanal Cember Yayi: 163.0 derece, donus saat yonu tersi (CCW)
+[INFO] [1786740434.412211781] [square_route_planner]: Rota yayinlandi: 49 waypoint, toplam 23.86 m.
+[INFO] [1786740585.873339208] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, 5.0), B=(5.0, -5.0). Rota hesaplaniyor...
+[INFO] [1786740585.873836676] [square_route_planner]: Sanal Cember Yayi: 163.0 derece, donus saat yonu tersi (CCW)
+[INFO] [1786740585.876126949] [square_route_planner]: Rota yayinlandi: 49 waypoint, toplam 23.86 m.
+[INFO] [1786740604.058862505] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786740604.059698985] [square_route_planner]: Sanal Cember Yayi: 159.1 derece, donus saat yonu (CW)
+[INFO] [1786740604.063063160] [square_route_planner]: Rota yayinlandi: 58 waypoint, toplam 28.68 m.
+[INFO] [1786740761.448254431] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[INFO] [1786740761.449075414] [square_route_planner]: Sanal Cember Yayi: 196.3 derece, donus saat yonu tersi (CCW)
+[INFO] [1786740761.452939018] [square_route_planner]: Rota yayinlandi: 76 waypoint, toplam 36.57 m.
+[INFO] [1786740820.680900405] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786740820.681750974] [square_route_planner]: Sanal Cember Yayi: 159.1 derece, donus saat yonu (CW)
+[INFO] [1786740820.684159987] [square_route_planner]: Rota yayinlandi: 58 waypoint, toplam 28.68 m.
+[INFO] [1786740863.490273705] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786740863.491124710] [square_route_planner]: Sanal Cember Yayi: 159.1 derece, donus saat yonu (CW)
+[INFO] [1786740863.494357344] [square_route_planner]: Rota yayinlandi: 58 waypoint, toplam 28.68 m.
+[INFO] [1786740943.912057592] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786740943.912572359] [square_route_planner]: Sanal Cember Yayi: 159.1 derece, donus saat yonu (CW)
+[INFO] [1786740943.914812444] [square_route_planner]: Rota yayinlandi: 58 waypoint, toplam 28.68 m.
+[INFO] [1786741027.788141636] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786741027.788605416] [square_route_planner]: Sanal Cember Yayi: 159.1 derece, donus saat yonu (CW)
+[INFO] [1786741027.790618335] [square_route_planner]: Rota yayinlandi: 58 waypoint, toplam 28.68 m.
+[INFO] [1786741049.881497785] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, 5.0), B=(5.0, -5.0). Rota hesaplaniyor...
+[INFO] [1786741049.881978694] [square_route_planner]: Sanal Cember Yayi: 163.0 derece, donus saat yonu tersi (CCW)
+[INFO] [1786741049.883935727] [square_route_planner]: Rota yayinlandi: 49 waypoint, toplam 23.86 m.
+[INFO] [1786741250.432123107] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[INFO] [1786741250.432851880] [square_route_planner]: Sanal Cember Yayi: 196.3 derece, donus saat yonu tersi (CCW)
+[INFO] [1786741250.435945151] [square_route_planner]: Rota yayinlandi: 76 waypoint, toplam 36.57 m.
+[INFO] [1786741320.655746531] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, 5.0), B=(5.0, -5.0). Rota hesaplaniyor...
+[INFO] [1786741320.656339958] [square_route_planner]: Sanal Cember Yayi: 163.0 derece, donus saat yonu tersi (CCW)
+[INFO] [1786741320.666767956] [square_route_planner]: Rota yayinlandi: 49 waypoint, toplam 23.86 m.
+[INFO] [1786741470.576517950] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786741470.577011328] [square_route_planner]: Sanal Cember Yayi: 159.1 derece, donus saat yonu (CW)
+[INFO] [1786741470.579165188] [square_route_planner]: Rota yayinlandi: 58 waypoint, toplam 28.68 m.
+[INFO] [1786741541.596247355] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[INFO] [1786741541.596914543] [square_route_planner]: Sanal Cember Yayi: 196.3 derece, donus saat yonu tersi (CCW)
+[INFO] [1786741541.600322460] [square_route_planner]: Rota yayinlandi: 76 waypoint, toplam 36.57 m.
+[INFO] [1786741671.679227591] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, -10.0), B=(5.0, 5.0). Rota hesaplaniyor...
+[INFO] [1786741671.680068119] [square_route_planner]: Sanal Cember Yayi: 159.1 derece, donus saat yonu (CW)
+[INFO] [1786741671.683006328] [square_route_planner]: Rota yayinlandi: 58 waypoint, toplam 28.68 m.
+[INFO] [1786741690.726965638] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(5.0, 5.0), B=(5.0, -5.0). Rota hesaplaniyor...
+[INFO] [1786741690.727470030] [square_route_planner]: Sanal Cember Yayi: 163.0 derece, donus saat yonu tersi (CCW)
+[INFO] [1786741690.729540333] [square_route_planner]: Rota yayinlandi: 49 waypoint, toplam 23.86 m.
+[INFO] [1786741704.756858862] [square_route_planner]: Noktalar: S=(0.0, 0.0), E=(0.0, 0.0), B=(10.0, 10.0). Rota hesaplaniyor...
+[INFO] [1786741704.757709490] [square_route_planner]: Sanal Cember Yayi: 196.3 derece, donus saat yonu tersi (CCW)
+[INFO] [1786741704.761192576] [square_route_planner]: Rota yayinlandi: 76 waypoint, toplam 36.57 m.
+Traceback (most recent call last):
+  File "/home/femre/ros-ws/install/zed_pose_test/lib/python3.12/site-packages/zed_pose_test/square_route_planner.py", line 332, in main
+    ma.markers.append(m)
+^^^^^^^^^^^^^^^^
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 247, in spin
+    executor.spin_once()
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 926, in spin_once
+    self._spin_once_impl(timeout_sec)
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 907, in _spin_once_impl
+    handler, entity, node = self.wait_for_ready_callbacks(
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 877, in wait_for_ready_callbacks
+    return next(self._cb_iter)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 785, in _wait_for_ready_callbacks
+    raise ExternalShutdownException()
+rclpy.executors.ExternalShutdownException
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/femre/ros-ws/install/zed_pose_test/lib/zed_pose_test/square_route_planner", line 33, in <module>
+    sys.exit(load_entry_point('zed-pose-test==0.0.0', 'console_scripts', 'square_route_planner')())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/femre/ros-ws/install/zed_pose_test/lib/python3.12/site-packages/zed_pose_test/square_route_planner.py", line 337, in main
+    def main(args=None):
+            ^^^^^^^^^^^^^
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 134, in shutdown
+    _shutdown(context=context)
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/utilities.py", line 82, in shutdown
+    context.shutdown()
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/context.py", line 129, in shutdown
+    self.__context.shutdown()
+rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:333

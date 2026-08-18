@@ -1,0 +1,19 @@
+image_width: 720
+image_height: 540
+camera_name: cam3
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [346.20892828621, 0.0, 359.8761479828756, 
+          0.0, 346.18904460687565, 273.7250435627611, 
+          0.0, 0.0, 1.0]
+
+distortion_model: equirefractive
+distortion_coefficients:
+  rows: 1
+  cols: 4
+  data: [-0.039380303470433545, 5.495014239391039e-05, -0.0016439345991880877, 0.00028318692542968763]
+refractive_index: 
+  rows: 1
+  cols: 2
+  data: [1.0, 1.0]                           # The refractive index here is overriden by the value rovio.info Init.State.ref
