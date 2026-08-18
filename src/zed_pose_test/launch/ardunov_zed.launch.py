@@ -22,7 +22,7 @@ def generate_launch_description():
             'cam_pos_y': '0.0',
             'cam_pos_z': '0.0',
             'cam_roll': '0.0',
-            'cam_pitch': '1.5708', # 90 derece asagi
+            'cam_pitch': '0.0', # QGC VISO_ORIENT yonettigi icin 0.0 yapildi
             'cam_yaw': '0.0'
         }.items()
     )
