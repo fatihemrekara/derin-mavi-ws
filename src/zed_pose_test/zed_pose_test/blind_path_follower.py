@@ -5,10 +5,16 @@ import math
 import csv
 import datetime
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
-from nav_msgs.msg import Path
 from mavros_msgs.msg import OverrideRCIn, VfrHud
 from std_msgs.msg import Float64
+from geometry_msgs.msg import PoseStamped
+from sensor_msgs.msg import Imu
 from mavros_msgs.srv import CommandBool, SetMode
+
+def quat_to_yaw(ox, oy, oz, ow):
+    siny_cosp = 2.0 * (ow * oz + ox * oy)
+    cosy_cosp = 1.0 - 2.0 * (oy * oy + oz * oz)
+    return math.atan2(siny_cosp, cosy_cosp)
 
 def normalize_angle(a):
     while a > math.pi:
@@ -72,6 +78,19 @@ class BlindPathFollowerNode(Node):
         self.rel_alt = None
         self.vfr_alt = None
         
+        # ZED logging vars
+        self.zed_x = 0.0
+        self.zed_y = 0.0
+        self.zed_yaw = 0.0
+        
+        self.cube_ax = 0.0; self.cube_ay = 0.0; self.cube_az = 0.0
+        self.cube_gx = 0.0; self.cube_gy = 0.0; self.cube_gz = 0.0
+        
+        self.zed_ax = 0.0; self.zed_ay = 0.0; self.zed_az = 0.0
+        self.zed_gx = 0.0; self.zed_gy = 0.0; self.zed_gz = 0.0
+        
+        self.ekf_x = 0.0; self.ekf_y = 0.0; self.ekf_z = 0.0; self.ekf_yaw = 0.0
+        
         self.state = 'WAITING_FOR_PATH'
         self.dive_start_time = None
         self.fwd_start_time = None
@@ -87,7 +106,11 @@ class BlindPathFollowerNode(Node):
         self.csv_writer.writerow([
             'timestamp', 'state', 'wp_idx', 
             'heading_deg', 'target_heading_deg', 
-            'rel_alt', 'vfr_alt', 'fwd_pwm', 'yaw_pwm', 'duration_left'
+            'rel_alt', 'vfr_alt', 'fwd_pwm', 'yaw_pwm', 'duration_left',
+            'zed_x', 'zed_y', 'zed_yaw_deg',
+            'cube_ax', 'cube_ay', 'cube_az', 'cube_gx', 'cube_gy', 'cube_gz',
+            'zed_ax', 'zed_ay', 'zed_az', 'zed_gx', 'zed_gy', 'zed_gz',
+            'ekf_x', 'ekf_y', 'ekf_z', 'ekf_yaw_deg'
         ])
         
         latched = QoSProfile(
@@ -104,6 +127,11 @@ class BlindPathFollowerNode(Node):
         self.path_sub = self.create_subscription(Path, str(gp('path_topic')), self.on_path, latched)
         self.vfr_sub = self.create_subscription(VfrHud, '/mavros/vfr_hud', self.on_vfr, sensor_qos)
         self.rel_alt_sub = self.create_subscription(Float64, '/mavros/global_position/rel_alt', self.on_rel_alt, sensor_qos)
+        self.zed_sub = self.create_subscription(PoseStamped, '/zed/zed_node/pose', self.on_zed_pose, sensor_qos)
+        self.ekf_sub = self.create_subscription(PoseStamped, '/mavros/local_position/pose', self.on_ekf_pose, sensor_qos)
+        
+        self.cube_imu_sub = self.create_subscription(Imu, '/mavros/imu/data', self.on_cube_imu, sensor_qos)
+        self.zed_imu_sub = self.create_subscription(Imu, '/zed/zed_node/imu/data', self.on_zed_imu, sensor_qos)
         
         self.rc_pub = self.create_publisher(OverrideRCIn, str(gp('rc_override_topic')), 10)
         self.arm_client = self.create_client(CommandBool, '/mavros/cmd/arming')
@@ -138,6 +166,37 @@ class BlindPathFollowerNode(Node):
         """Global Position'dan relative_alt degeri gelir. Su altina inis karsi yonlu (-)"""
         self.rel_alt = msg.data
 
+    def on_zed_pose(self, msg: PoseStamped):
+        """Sadece LOGLAMAK icin arka planda okunur, kontrole dahil edilmez."""
+        self.zed_x = msg.pose.position.x
+        self.zed_y = msg.pose.position.y
+        o = msg.pose.orientation
+        self.zed_yaw = quat_to_yaw(o.x, o.y, o.z, o.w)
+
+    def on_ekf_pose(self, msg: PoseStamped):
+        """Sadece LOGLAMAK icindir. Arac bu veriyi takip icin KULLANMAZ."""
+        self.ekf_x = msg.pose.position.x
+        self.ekf_y = msg.pose.position.y
+        self.ekf_z = msg.pose.position.z
+        o = msg.pose.orientation
+        self.ekf_yaw = quat_to_yaw(o.x, o.y, o.z, o.w)
+
+    def on_cube_imu(self, msg: Imu):
+        self.cube_ax = msg.linear_acceleration.x
+        self.cube_ay = msg.linear_acceleration.y
+        self.cube_az = msg.linear_acceleration.z
+        self.cube_gx = msg.angular_velocity.x
+        self.cube_gy = msg.angular_velocity.y
+        self.cube_gz = msg.angular_velocity.z
+
+    def on_zed_imu(self, msg: Imu):
+        self.zed_ax = msg.linear_acceleration.x
+        self.zed_ay = msg.linear_acceleration.y
+        self.zed_az = msg.linear_acceleration.z
+        self.zed_gx = msg.angular_velocity.x
+        self.zed_gy = msg.angular_velocity.y
+        self.zed_gz = msg.angular_velocity.z
+
     def stop(self):
         rc_msg = OverrideRCIn()
         rc_msg.channels = [65535] * 18
@@ -168,7 +227,13 @@ class BlindPathFollowerNode(Node):
                 f"{math.degrees(self.heading_rad):.2f}", f"{th:.2f}",
                 f"{self.rel_alt if self.rel_alt is not None else 0.0:.2f}",
                 f"{self.vfr_alt if self.vfr_alt is not None else 0.0:.2f}",
-                self.fwd_out, self.yaw_out, f"{dur:.2f}"
+                self.fwd_out, self.yaw_out, f"{dur:.2f}",
+                f"{self.zed_x:.3f}", f"{self.zed_y:.3f}", f"{math.degrees(self.zed_yaw):.2f}",
+                f"{self.cube_ax:.3f}", f"{self.cube_ay:.3f}", f"{self.cube_az:.3f}",
+                f"{self.cube_gx:.3f}", f"{self.cube_gy:.3f}", f"{self.cube_gz:.3f}",
+                f"{self.zed_ax:.3f}", f"{self.zed_ay:.3f}", f"{self.zed_az:.3f}",
+                f"{self.zed_gx:.3f}", f"{self.zed_gy:.3f}", f"{self.zed_gz:.3f}",
+                f"{self.ekf_x:.3f}", f"{self.ekf_y:.3f}", f"{self.ekf_z:.3f}", f"{math.degrees(self.ekf_yaw):.2f}"
             ])
             self.log_file.flush()
 
