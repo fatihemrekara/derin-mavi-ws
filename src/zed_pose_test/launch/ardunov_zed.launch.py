@@ -18,7 +18,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             'camera_model': 'zed2',
-            'cam_pos_x': '0.38',
+            'cam_pos_x': '0.0',
             'cam_pos_y': '0.0',
             'cam_pos_z': '0.0',
             'cam_roll': '0.0',

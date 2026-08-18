@@ -34,9 +34,9 @@ class ZedToMavrosBridge(Node):
         
         # Kamera ile Araç Merkezi Arasındaki Donanımsal Mesafe & Açı Tanımlamaları
         # Pitch: 90 derece aşağı (+1.5707963 radyan)
-        # Offset: 0.38 m X ekseninde ileri
+        # Offset: QGroundControl (EKF) tarafindan yonetilmesi icin koddan kaldirildi
         self.cam_pitch_rad = 1.5707963
-        self.cam_offset_x = 0.38
+        self.cam_offset_x = 0.0
         
         # q_bc: base_link -> zed_camera_link rotasyonu
         pitch_half = self.cam_pitch_rad / 2.0
