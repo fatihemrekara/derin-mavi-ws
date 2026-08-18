@@ -53,9 +53,19 @@ class ZedToMavrosBridge(Node):
         out_msg.header.stamp = msg.header.stamp
         out_msg.header.frame_id = 'odom' 
         
-        # Kamera pozisyonu ve yönelimini olduğu gibi MAVROS'a aktar (Düzeltmesiz)
-        # Offset ve yönelim (VISO_ORIENT) işlemleri QGC/EKF3 tarafında yapılacak.
-        out_msg.pose.pose = msg.pose.pose
+        # Kamera pozisyonunu (X, Y, Z) aliyoruz
+        out_msg.pose.pose.position = msg.pose.pose.position
+        
+        # ZED'in ic ice gecmis IMU ve su alti gorsel odometrisinden kaynaklanan 
+        # aci/rotasyon suruklenmesini kokten cozmek icin Yonelimi (Orientation) sabitliyoruz.
+        # Boylece MAVROS (ArduPilot) ZED'in kendi kendine takla atmasini umursamiyor,
+        # sadece yer degistirme miktarini (X,Y) ZED'den, yatay kalma (Pitch/Roll) isini ise
+        # dogrudan kendi mukemmel Cube Orange IMU'sundan cozuyor.
+        out_msg.pose.pose.orientation.x = 0.0
+        out_msg.pose.pose.orientation.y = 0.0
+        out_msg.pose.pose.orientation.z = 0.0
+        out_msg.pose.pose.orientation.w = 1.0
+
         out_msg.pose.covariance = msg.pose.covariance
         
         self.pub.publish(out_msg)
