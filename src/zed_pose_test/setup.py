@@ -52,6 +52,7 @@ setup(
             'ekf_sensor_evaluation_test = zed_pose_test.ekf_sensor_evaluation_test:main',
             'passive_sensor_logger = zed_pose_test.passive_sensor_logger:main',
             'ekf_delay_diagnostic = zed_pose_test.ekf_delay_diagnostic:main',
+            'blind_path_follower = zed_pose_test.blind_path_follower:main',
         ],
     },
 )
