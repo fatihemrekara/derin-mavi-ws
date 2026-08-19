@@ -209,17 +209,18 @@ class StraightBlindTestNode(Node):
 
         if self.state in ['DONE', 'SURFACING']:
             return
-            
-        if self.heading_rad is None or self.rel_alt is None:
-            if int(elapsed * 10) % 20 == 0:
-                self.get_logger().info('Pusula veya rel_alt verisi bekleniyor...')
-            return
 
+        # STARTING ve ARMING sensör verisine ihtiyaç duymaz — MAVROS topic'leri
+        # henüz yayınlanmamış olsa bile ARM süreci başlasın.
         if self.state == 'STARTING':
+            has_hdg = self.heading_rad is not None
+            has_alt = self.rel_alt is not None
+            self.get_logger().info(f'Başlatılıyor... pusula={has_hdg}, rel_alt={has_alt}', throttle_duration_sec=2.0)
             if elapsed > 2.0:
                 self.change_state('ARMING')
+            return
 
-        elif self.state == 'ARMING':
+        if self.state == 'ARMING':
             if not hasattr(self, '_last_arm_attempt') or (now - self._last_arm_attempt).nanoseconds * 1e-9 > 2.0:
                 self._last_arm_attempt = now
                 if self.mode_client.wait_for_service(timeout_sec=0.5):
@@ -241,9 +242,16 @@ class StraightBlindTestNode(Node):
             
             if elapsed > 4.0:
                 self.change_state('DIVING')
+            return
 
-        elif self.state == 'DIVING':
-            # Dalış: 1200 PWM until -1.0 rel_alt
+        # DIVING ve FORWARD state'leri sensör verisine ihtiyaç duyar
+        if self.heading_rad is None or self.rel_alt is None:
+            self.get_logger().info(
+                f'Pusula veya rel_alt verisi bekleniyor... (hdg={self.heading_rad is not None}, alt={self.rel_alt is not None})',
+                throttle_duration_sec=2.0)
+            return
+
+        if self.state == 'DIVING':
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
             rc_msg.channels[2] = 1200  
@@ -254,8 +262,7 @@ class StraightBlindTestNode(Node):
             
             self.thr_out = 1200; self.fwd_out = 1500; self.yaw_out = 1500
             
-            if int(elapsed * 10) % 20 == 0:
-                self.get_logger().info(f'Dalış: 1200 PWM, rel_alt: {self.rel_alt:.2f}m')
+            self.get_logger().info(f'Dalış: 1200 PWM, rel_alt: {self.rel_alt:.2f}m', throttle_duration_sec=2.0)
             
             if self.rel_alt < -1.0 or elapsed > 15.0:
                 self.change_state('FORWARD')
@@ -281,8 +288,9 @@ class StraightBlindTestNode(Node):
             self.thr_out = pwm_thr; self.fwd_out = self.fwd_pwm; self.yaw_out = 1500
             self.rc_pub.publish(rc_msg)
             
-            if int(elapsed * 10) % 10 == 0:
-                self.get_logger().info(f"Düz Gidiliyor... {self.fwd_duration - elapsed:.1f} s kaldı. Pwm(Thr, Fwd): ({pwm_thr}, {self.fwd_pwm})")
+            self.get_logger().info(
+                f"Düz Gidiliyor... {self.fwd_duration - elapsed:.1f} s kaldı. Pwm(Thr, Fwd): ({pwm_thr}, {self.fwd_pwm})",
+                throttle_duration_sec=1.0)
 
 # Global referans
 _node = None
