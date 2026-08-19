@@ -60,8 +60,8 @@ class BlindPathFollowerNode(Node):
         self.declare_parameter('control_rate_hz', 20.0)
         self.declare_parameter('speed_mps', 0.4)       # Zaman hesabi icin hedef fwd hizi (yaklasik)
         self.declare_parameter('fwd_pwm', 1600)        # Duz ilerlerken verilecek ileri yon throttle'i
-        self.declare_parameter('yaw_tolerance_deg', 5.0)
-        self.declare_parameter('k_heading', 1.8)
+        self.declare_parameter('yaw_tolerance_deg', 12.0)
+        self.declare_parameter('k_heading', 1.0)
         self.declare_parameter('w_max', 1.0)
         
         gp = lambda n: self.get_parameter(n).value
@@ -329,7 +329,7 @@ class BlindPathFollowerNode(Node):
                 return
                 
             w = max(-self.w_max, min(self.w_max, self.k_heading * heading_err))
-            pwm_yaw = int(1500 - (w / self.w_max) * 400) if self.w_max > 0 else 1500
+            pwm_yaw = int(1500 - (w / self.w_max) * 200) if self.w_max > 0 else 1500
             
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
@@ -351,9 +351,8 @@ class BlindPathFollowerNode(Node):
                 self.stop()
                 return
                 
-            # İleri giderken ayni zamanda heading correction yapmaya devam edelim
-            w = max(-self.w_max, min(self.w_max, self.k_heading * heading_err))
-            pwm_yaw = int(1500 - (w / self.w_max) * 400) if self.w_max > 0 else 1500
+            # İleri giderken baş açısı kontrolü tamamen kapalı (kullanıcı talebi)
+            pwm_yaw = 1500
             
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
