@@ -286,18 +286,35 @@ class BlindPathFollowerNode(Node):
             return
 
         if self.state == 'ARMING':
-            if self.mode_client.wait_for_service(timeout_sec=1.0):
-                req = SetMode.Request()
-                req.custom_mode = 'ALT_HOLD'
-                self.mode_client.call_async(req)
-                
-            if self.arm_client.wait_for_service(timeout_sec=1.0):
-                req = CommandBool.Request()
-                req.value = True
-                self.arm_client.call_async(req)
-            self.state = 'DIVING'
-            self.dive_start_time = now
-            self.get_logger().info('Araç ALT_HOLD modunda Arm edildi. Otonom dalış başlıyor...')
+            elapsed = (now - self.state_start_time).nanoseconds * 1e-9 if hasattr(self, 'state_start_time') else 0.0
+            
+            # İlk 0.2 saniye içinde mod ve arm komutlarını gönder (referans: compass_dive_test.py)
+            if elapsed < 0.2:
+                if not hasattr(self, '_arm_sent'):
+                    if self.mode_client.wait_for_service(timeout_sec=0.5):
+                        req = SetMode.Request()
+                        req.custom_mode = 'ALT_HOLD'
+                        self.mode_client.call_async(req)
+                    if self.arm_client.wait_for_service(timeout_sec=0.5):
+                        req = CommandBool.Request()
+                        req.value = True
+                        self.arm_client.call_async(req)
+                    self._arm_sent = True
+                    self.state_start_time = now
+                    self.get_logger().info('Araç ALT_HOLD moduna alınıyor ve Arm ediliyor...')
+            
+            # 2 saniye boyunca güvenlik PWM'i gönder (ArduSub'ın modu kabul etmesini bekle)
+            rc_msg = OverrideRCIn()
+            rc_msg.channels = [65535] * 18
+            rc_msg.channels[2] = 1500  # Throttle nötr
+            rc_msg.channels[3] = 1500  # Yaw nötr
+            rc_msg.channels[4] = 1500  # Forward nötr
+            self.rc_pub.publish(rc_msg)
+            
+            if elapsed > 2.0:
+                self.state = 'DIVING'
+                self.dive_start_time = now
+                self.get_logger().info('Araç hazır! Otonom dalış başlıyor (1400 PWM)...')
             return
             
         if self.state == 'DIVING':
