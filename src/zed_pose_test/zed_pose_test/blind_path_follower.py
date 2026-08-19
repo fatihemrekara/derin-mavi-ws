@@ -225,13 +225,17 @@ class BlindPathFollowerNode(Node):
 
     def stop(self):
         rc_msg = OverrideRCIn()
-        rc_msg.channels = [65535] * 18
-        rc_msg.channels[2] = 1500  # Depth hold neutral
-        rc_msg.channels[3] = 1500
-        rc_msg.channels[4] = 1500
+        # 0 göndermek MAVROS'ta RC override'ı pilot kumandasına (joystick) devretmek demektir!
+        rc_msg.channels = [0] * 18 
         self.fwd_out = 1500
         self.yaw_out = 1500
         self.rc_pub.publish(rc_msg)
+        
+        # Otonom görev bittiğinde veya CTRL+C basıldığında KESİN durması için aracı DISARM (Motor Kapatma) yapıyoruz!
+        if self.arm_client.wait_for_service(timeout_sec=0.5):
+            req = CommandBool.Request()
+            req.value = False
+            self.arm_client.call_async(req)
 
     def control_loop(self):
         now = self.get_clock().now()
@@ -303,7 +307,7 @@ class BlindPathFollowerNode(Node):
             rc_msg.channels[1] = 1500  # Roll Kilitli
             rc_msg.channels[3] = 1500  # Yaw Kilitli
             rc_msg.channels[4] = 1500  # İleri-Geri Kilitli
-            rc_msg.channels[2] = 1250  # Dalış Gücü (Kullanıcı talebi üzerine 1250 olarak ayarlandı)
+            rc_msg.channels[2] = 1200  # Dalış Gücü (Kullanıcı talebi üzerine 1200 yapıldı)
             self.fwd_out = 1500; self.yaw_out = 1500
             self.rc_pub.publish(rc_msg)
             
