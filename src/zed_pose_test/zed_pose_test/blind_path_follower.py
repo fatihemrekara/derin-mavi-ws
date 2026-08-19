@@ -4,6 +4,8 @@ from rclpy.node import Node
 import math
 import csv
 import datetime
+import signal
+import sys
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
 from std_msgs.msg import Float64
 from geometry_msgs.msg import PoseStamped
@@ -301,7 +303,7 @@ class BlindPathFollowerNode(Node):
             rc_msg.channels[1] = 1500  # Roll Kilitli
             rc_msg.channels[3] = 1500  # Yaw Kilitli
             rc_msg.channels[4] = 1500  # İleri-Geri Kilitli
-            rc_msg.channels[2] = 1350  # Dalış Gücü (ALT_HOLD modunda 1350 çok daha güvenli ve düz iner)
+            rc_msg.channels[2] = 1250  # Dalış Gücü (Kullanıcı talebi üzerine 1250 olarak ayarlandı)
             self.fwd_out = 1500; self.yaw_out = 1500
             self.rc_pub.publish(rc_msg)
             
@@ -383,16 +385,27 @@ class BlindPathFollowerNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = BlindPathFollowerNode()
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    finally:
+    
+    def sigint_handler(sig, frame):
+        node.get_logger().info("CTRL+C Algılandı! Araç acil durduruluyor...")
         node.stop()
         if not node.log_file.closed:
             node.log_file.close()
+        
+        # ROS 2 tamamen kapanmadan önce mesajın gittiğinden emin olmak için kısa süre bekle
+        import time
+        time.sleep(0.2)
+        
         node.destroy_node()
         rclpy.shutdown()
+        sys.exit(0)
+        
+    signal.signal(signal.SIGINT, sigint_handler)
+
+    try:
+        rclpy.spin(node)
+    except Exception:
+        pass
 
 if __name__ == '__main__':
     main()
