@@ -67,7 +67,7 @@ class StraightBlindTestNode(Node):
         
         # CSV Logging Setup
         stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        self.log_filename = os.path.join(os.path.expanduser('~'), 'ros-ws', f'straight_blind_log_{stamp}.csv')
+        self.log_filename = os.path.join(os.path.expanduser('~'), f'straight_blind_log_{stamp}.csv')
         self.log_file = open(self.log_filename, 'w', newline='')
         self.csv_writer = csv.writer(self.log_file)
         self.csv_writer.writerow([
