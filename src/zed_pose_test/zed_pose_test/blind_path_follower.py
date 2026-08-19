@@ -167,8 +167,9 @@ class BlindPathFollowerNode(Node):
             self.state = 'ARMING'
 
     def on_vfr(self, msg: VfrHud):
-        """VFR HUD'dan bodoslama EKF compass header'ı gelir."""
-        self.heading_rad = math.radians(msg.heading)
+        """VFR HUD pusula verisi (NED -> 0 Kuzey, 90 Doğu). ROS planlayıcıları ENU (0 Doğu, 90 Kuzey) kullanır. NED'den ENU'ya çeviriyoruz."""
+        ned_rad = math.radians(msg.heading)
+        self.heading_rad = normalize_angle(math.pi/2.0 - ned_rad)
         self.vfr_alt = msg.altitude
         
     def on_rel_alt(self, msg: Float64):
