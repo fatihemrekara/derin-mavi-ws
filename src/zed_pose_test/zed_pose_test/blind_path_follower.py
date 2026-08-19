@@ -61,7 +61,7 @@ class BlindPathFollowerNode(Node):
         self.declare_parameter('rc_override_topic', '/mavros/rc/override')
         self.declare_parameter('control_rate_hz', 20.0)
         self.declare_parameter('speed_mps', 0.4)       # Zaman hesabi icin hedef fwd hizi (yaklasik)
-        self.declare_parameter('fwd_pwm', 1600)        # Duz ilerlerken verilecek ileri yon throttle'i
+        self.declare_parameter('fwd_pwm', 1750)        # Duz ilerlerken verilecek ileri yon throttle'i
         self.declare_parameter('yaw_tolerance_deg', 15.0)
         self.declare_parameter('k_heading', 3.0)
         self.declare_parameter('w_max', 1.0)
@@ -361,7 +361,8 @@ class BlindPathFollowerNode(Node):
                 return
                 
             w = max(-self.w_max, min(self.w_max, self.k_heading * heading_err))
-            pwm_yaw = int(1500 - (w / self.w_max) * 200) if self.w_max > 0 else 1500
+            # Hata pozitifse (hedef açısı mevcut açıdan büyükse), >1500 PWM vererek sağa/saat yönüne döndürmeliyiz.
+            pwm_yaw = int(1500 + (w / self.w_max) * 200) if self.w_max > 0 else 1500
             
             # Aktif Derinlik Kontrolü (-1.0 metre hedefini korumak için)
             depth_err = -1.0 - (self.rel_alt if self.rel_alt is not None else 0.0)
