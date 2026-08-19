@@ -62,8 +62,8 @@ class BlindPathFollowerNode(Node):
         self.declare_parameter('control_rate_hz', 20.0)
         self.declare_parameter('speed_mps', 0.4)       # Zaman hesabi icin hedef fwd hizi (yaklasik)
         self.declare_parameter('fwd_pwm', 1600)        # Duz ilerlerken verilecek ileri yon throttle'i
-        self.declare_parameter('yaw_tolerance_deg', 12.0)
-        self.declare_parameter('k_heading', 1.0)
+        self.declare_parameter('yaw_tolerance_deg', 15.0)
+        self.declare_parameter('k_heading', 3.0)
         self.declare_parameter('w_max', 1.0)
         
         gp = lambda n: self.get_parameter(n).value
@@ -351,13 +351,15 @@ class BlindPathFollowerNode(Node):
             
             # Aktif Derinlik Kontrolü (-1.0 metre hedefini korumak için)
             depth_err = -1.0 - (self.rel_alt if self.rel_alt is not None else 0.0)
-            pwm_thr = int(1500 + 250.0 * depth_err) 
+            # Sabit pozitif batmazlığı yenmek için (Steady-State error) merkez 1450'ye çekildi!
+            pwm_thr = int(1450 + 300.0 * depth_err) 
             
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
             rc_msg.channels[2] = max(1300, min(1700, pwm_thr))
             rc_msg.channels[3] = max(1100, min(1900, pwm_yaw))
             rc_msg.channels[4] = 1500  # Stop fwd
+            rc_msg.channels[5] = 1500  # Sway (Yanal Hareket Kilitli)
             
             self.fwd_out = 1500
             self.yaw_out = rc_msg.channels[3]
@@ -378,13 +380,15 @@ class BlindPathFollowerNode(Node):
             
             # Aktif Derinlik Kontrolü (-1.0 metre hedefini korumak için)
             depth_err = -1.0 - (self.rel_alt if self.rel_alt is not None else 0.0)
-            pwm_thr = int(1500 + 250.0 * depth_err)
+            # Sabit pozitif batmazlığı yenmek için merkez 1450'ye çekildi
+            pwm_thr = int(1450 + 300.0 * depth_err)
             
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
             rc_msg.channels[2] = max(1300, min(1700, pwm_thr))
             rc_msg.channels[3] = max(1100, min(1900, pwm_yaw))
             rc_msg.channels[4] = self.fwd_pwm
+            rc_msg.channels[5] = 1500  # Sway Kilitli
             
             self.fwd_out = self.fwd_pwm
             self.yaw_out = rc_msg.channels[3]
