@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import signal
+import sys
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
@@ -8,6 +10,7 @@ from std_msgs.msg import Float64
 from mavros_msgs.msg import OverrideRCIn, VfrHud
 from mavros_msgs.srv import CommandBool, SetMode
 import math
+import time
 
 class CompassDiveLogger(Node):
     def __init__(self):
@@ -30,18 +33,29 @@ class CompassDiveLogger(Node):
         self.compass_hdg = 0.0
         self.altitude = 0.0
         self.rel_alt = 0.0
+        self.shutting_down = False
         
         self.state_start_time = self.get_clock().now()
         
+        # ========== DALIS PARAMETRELERI ==========
+        self.DIVE_THROTTLE = 1250     # Dalış thrust değeri (1500=nötr, düşük=aşağı).
+        self.TARGET_DEPTH = -1.0      # Hedef derinlik (metre, negatif = su altı)
+        self.DIVE_TIMEOUT = 15.0      # Maksimum dalış süresi (saniye)
+        self.HOLD_DURATION = 5.0      # Derinlikte bekleme süresi (saniye)
+        # =========================================
+        
         # Log dosyasina yazmak icin CSV açıyoruz
         import os
-        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'compass_dive_log.csv')
+        from datetime import datetime
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_path = os.path.join(os.path.expanduser('~'), f'compass_dive_log_{stamp}.csv')
         self.log_file = open(log_path, 'w')
         self.log_file.write("Time(s),State,RelAlt(m),Compass_Hdg(deg)\n")
         
         self.timer = self.create_timer(0.1, self.control_loop)
         self.get_logger().info("Compass Dive Logger scripti baslatildi.")
         self.get_logger().info(f"Loglar {log_path} dosyasina kaydediliyor...")
+        self.get_logger().info(f"Dalış throttle: {self.DIVE_THROTTLE}, Hedef derinlik: {self.TARGET_DEPTH} m")
         
     def hdg_cb(self, msg):
         self.compass_hdg = msg.data
@@ -56,8 +70,45 @@ class CompassDiveLogger(Node):
         self.state = new_state
         self.state_start_time = self.get_clock().now()
         self.get_logger().info(f"--- STATE: {new_state} ---")
+    
+    def emergency_stop(self):
+        """Acil durum: DISARM + RC release. Kod kapansa bile araç durur."""
+        if self.shutting_down:
+            return
+        self.shutting_down = True
+        self.get_logger().warn("!!! ACIL DURDURMA - DISARM ediliyor !!!")
+        
+        # RC kanallarini release et
+        for _ in range(5):
+            try:
+                rc = OverrideRCIn()
+                rc.channels = [65535] * 18
+                self.rc_pub.publish(rc)
+            except Exception:
+                pass
+        
+        # DISARM komutu gönder
+        try:
+            if self.arm_client.wait_for_service(timeout_sec=1.0):
+                req = CommandBool.Request()
+                req.value = False
+                future = self.arm_client.call_async(req)
+                rclpy.spin_until_future_complete(self, future, timeout_sec=2.0)
+                self.get_logger().info("DISARM komutu gonderildi.")
+        except Exception as e:
+            self.get_logger().error(f"DISARM hatasi: {e}")
+        
+        # Log dosyasini kapat
+        try:
+            self.log_file.flush()
+            self.log_file.close()
+        except Exception:
+            pass
         
     def control_loop(self):
+        if self.shutting_down:
+            return
+            
         now = self.get_clock().now()
         elapsed = (now - self.state_start_time).nanoseconds * 1e-9
         
@@ -75,8 +126,9 @@ class CompassDiveLogger(Node):
                 self.change_state('ARMING')
                 
         elif self.state == 'ARMING':
-            # Aracı MANUAL moda alıp Arm edelim
-            if elapsed < 0.2:
+            # Her 2 saniyede bir ARM + mod komutunu tekrar gönder
+            if not hasattr(self, '_last_arm_attempt') or (now - self._last_arm_attempt).nanoseconds * 1e-9 > 2.0:
+                self._last_arm_attempt = now
                 if self.mode_client.wait_for_service(timeout_sec=0.5):
                     req = SetMode.Request()
                     req.custom_mode = 'ALT_HOLD'
@@ -85,56 +137,60 @@ class CompassDiveLogger(Node):
                     req = CommandBool.Request()
                     req.value = True
                     self.arm_client.call_async(req)
+                self.get_logger().info(f"ALT_HOLD + ARM komutu gonderildi (elapsed={elapsed:.1f}s)")
             
-            # Guvenlik icin bos PWM gonderelim
+            # Güvenlik için boş PWM gönderelim
             rc = OverrideRCIn()
             rc.channels = [65535] * 18
-            rc.channels[2] = 1500
-            rc.channels[3] = 1500
-            rc.channels[4] = 1500
+            rc.channels[2] = 1500  # Throttle nötr
+            rc.channels[3] = 1500  # Yaw nötr
+            rc.channels[4] = 1500  # Fwd nötr
             self.rc_pub.publish(rc)
 
-            if elapsed > 2.0:
+            if elapsed > 4.0:
                 self.change_state('DIVING')
                 
         elif self.state == 'DIVING':
-            # Batırmak için throttle (Kanal 3) 1400'e çekiliyor (Kanal dizini 2->throttle)
+            # Sabit 1200 PWM ile dalış — basınç sensörü hedef derinliği okuyana kadar
             rc = OverrideRCIn()
             rc.channels = [65535] * 18
-            rc.channels[2] = 1400  # Dalış (throttle = 1400)
+            rc.channels[2] = 1200  # Sabit dalış gücü
             rc.channels[3] = 1500  # Yaw neutral
             rc.channels[4] = 1500  # Fwd neutral
             self.rc_pub.publish(rc)
             
-            # rel_alt -1 metreyi gectiyse veya 15s gectiyse ALT_HOLD'a gec
-            if self.rel_alt < -1.0 or self.altitude < -1.0 or elapsed > 15.0:
-                if self.mode_client.wait_for_service(timeout_sec=0.1):
-                    req = SetMode.Request()
-                    req.custom_mode = 'ALT_HOLD'
-                    self.mode_client.call_async(req)
+            self.get_logger().info(f"  Dalis: 1200 PWM, rel_alt={self.rel_alt:.2f}m", throttle_duration_sec=2.0)
+            
+            # Basınç sensörü hedef derinliği okuyana kadar veya timeout
+            if self.rel_alt < self.TARGET_DEPTH or elapsed > self.DIVE_TIMEOUT:
+                reason = "hedef derinlik" if self.rel_alt < self.TARGET_DEPTH else "zaman asimi"
+                self.get_logger().info(f"Dalis tamamlandi ({reason}). ALT_HOLD derinligi koruyacak.")
                 self.change_state('HOLDING')
                 
         elif self.state == 'HOLDING':
-            # ALT_HOLD modunda derinligi korumak icin throttle neutral'a (1500) cekilir
+            # ALT_HOLD modunda throttle 1500 = Orange Cube derinliği korusun
             rc = OverrideRCIn()
             rc.channels = [65535] * 18
-            rc.channels[2] = 1500
+            rc.channels[2] = 1500  # Nötr — ALT_HOLD derinliği kendi koruyor
             rc.channels[3] = 1500
             rc.channels[4] = 1500
             self.rc_pub.publish(rc)
             
-            if elapsed > 5.0:
+            self.get_logger().info(f"ALT_HOLD derinlik koruması: rel_alt={self.rel_alt:.2f}m", throttle_duration_sec=2.0)
+            
+            if elapsed > self.HOLD_DURATION:
                 self.change_state('STOPPING_MOTORS')
                 
         elif self.state == 'STOPPING_MOTORS':
-            # Batıp 5 saniye bekledikten sonra araci yuzeye cikarmak veya motoru durdurmak icin Disarm edelim
-            if elapsed < 0.2:
+            # Derinlikte bekledikten sonra DISARM et
+            if elapsed < 0.5:
                 if self.arm_client.wait_for_service(timeout_sec=0.5):
                     req = CommandBool.Request()
                     req.value = False  # DISARM - Pervaneler tamamen durur
                     self.arm_client.call_async(req)
+                    self.get_logger().info("DISARM komutu gonderildi")
                 
-            # RC sinyallerini de tamamen bosta (65535) birakalim
+            # RC sinyallerini de tamamen bosta bırakalım
             rc = OverrideRCIn()
             rc.channels = [65535] * 18
             self.rc_pub.publish(rc)
@@ -143,29 +199,47 @@ class CompassDiveLogger(Node):
                 self.change_state('SURFACING_AND_LOGGING')
             
         elif self.state == 'SURFACING_AND_LOGGING':
-            # Arac bu evrede motoru durdurulmus sekilde (veya DISARM edildigi icin) 
-            # pozitif yukselme ozellligi ile yalniz basina cikarken veya motor durmusken pusulay okumaya devam eder.
-            # Sen programi Ctril+C yapana kadar log asagiya akmaya devam edecek.
+            # Araç DISARM edildi, pozitif kaldırma kuvvetiyle yüzeye çıkacak.
+            # Ctrl+C yapana kadar log kaydına devam eder.
             pass
 
+# Global referans (signal handler icin)
+_node = None
+
+def _signal_handler(sig, frame):
+    """SIGINT/SIGTERM yakalandığında aracı durdur."""
+    global _node
+    if _node is not None:
+        _node.emergency_stop()
+    sys.exit(0)
+
 def main(args=None):
+    global _node
     rclpy.init(args=args)
     node = CompassDiveLogger()
+    _node = node
+    
+    # Signal handler'ları kur - kod her türlü kapatılsa bile araç durur
+    signal.signal(signal.SIGINT, _signal_handler)
+    signal.signal(signal.SIGTERM, _signal_handler)
+    
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
+    except Exception as e:
+        node.get_logger().error(f"Beklenmeyen hata: {e}")
     finally:
-        node.get_logger().info("Test durduruluyor, RC kanallari temizleniyor...")
+        node.emergency_stop()
         try:
-            rc = OverrideRCIn()
-            rc.channels = [65535] * 18
-            node.rc_pub.publish(rc)
+            node.destroy_node()
         except Exception:
             pass
-        node.log_file.close()
-        node.destroy_node()
-        rclpy.shutdown()
+        try:
+            rclpy.shutdown()
+        except Exception:
+            pass
 
 if __name__ == '__main__':
     main()
+

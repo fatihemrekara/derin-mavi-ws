@@ -44,7 +44,9 @@ class PassiveSensorLogger(Node):
         
         self.start_time = self.get_clock().now()
         
-        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'passive_sensor_log.csv')
+        from datetime import datetime
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'passive_sensor_log_{stamp}.csv')
         self.log_file = open(log_path, 'w')
         self.log_file.write(
             "Time(s),EKF_X,EKF_Y,EKF_Z,ZED_X,ZED_Y,ZED_Z,Bridge_X,Bridge_Y,Bridge_Z,"

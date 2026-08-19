@@ -1,0 +1,4 @@
+--- KEY DISCREPANCIES FINDINGS ---
+Final Position Drift (ZED vs EKF): X=3.83m, Y=8.12m
+Acceleration Variance (Cube vs ZED): Cube=0.109, ZED=0.012
+ZED output effectively analyzed comparing with EKF and PWM.

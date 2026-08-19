@@ -51,6 +51,12 @@ setup(
             'sensor_comparison_logger = zed_pose_test.sensor_comparison_logger:main',
             'ekf_sensor_evaluation_test = zed_pose_test.ekf_sensor_evaluation_test:main',
             'passive_sensor_logger = zed_pose_test.passive_sensor_logger:main',
+            'ekf_delay_diagnostic = zed_pose_test.ekf_delay_diagnostic:main',
+            'blind_path_follower = zed_pose_test.blind_path_follower:main',
+            'hybrid_path_follower = zed_pose_test.hybrid_path_follower:main',
+            'compass_dive_test = zed_pose_test.compass_dive_test:main',
+            'compass_circle_test = zed_pose_test.compass_circle_test:main',
+            'straight_blind_test = zed_pose_test.straight_blind_test:main',
         ],
     },
 )

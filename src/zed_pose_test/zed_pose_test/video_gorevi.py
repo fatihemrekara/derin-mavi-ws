@@ -111,7 +111,7 @@ class Mission(Node):
         while time.time() - t0 < sec:
             e = ang_diff(hold_hdg, self.hdg)
             yaw = NEUTRAL + int(clamp(e * 4.0, -120, 120))
-       self.rc(yaw=yaw, fwd=FWD_PWM)
+            self.rc(yaw=yaw, fwd=FWD_PWM)
             rclpy.spin_once(self, timeout_sec=0.02)
         self.neutral(1.5)
     def turn_right_90(self):
