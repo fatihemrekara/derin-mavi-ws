@@ -288,7 +288,7 @@ class BlindPathFollowerNode(Node):
         if self.state == 'ARMING':
             if self.mode_client.wait_for_service(timeout_sec=1.0):
                 req = SetMode.Request()
-                req.custom_mode = 'STABILIZE'
+                req.custom_mode = 'MANUAL'
                 self.mode_client.call_async(req)
                 
             if self.arm_client.wait_for_service(timeout_sec=1.0):
@@ -297,7 +297,7 @@ class BlindPathFollowerNode(Node):
                 self.arm_client.call_async(req)
             self.state = 'DIVING'
             self.dive_start_time = now
-            self.get_logger().info('Araç STABILIZE moduna alındı ve Arm edildi. Pürüzsüz ama güçlü dalış başlıyor...')
+            self.get_logger().info('Araç MANUAL modda Arm edildi. Güç sınırlaması olmadan dalış başlıyor...')
             return
             
         if self.state == 'DIVING':
@@ -307,7 +307,7 @@ class BlindPathFollowerNode(Node):
             rc_msg.channels[1] = 1500  # Roll Kilitli
             rc_msg.channels[3] = 1500  # Yaw Kilitli
             rc_msg.channels[4] = 1500  # İleri-Geri Kilitli
-            rc_msg.channels[2] = 1250  # Dalış Gücü (STABILIZE modunda doğrudan motora gider, çok çok güçlüdür)
+            rc_msg.channels[2] = 1400  # Dalış Gücü (MANUAL modunda 1400 en temiz dalıştır)
             self.fwd_out = 1500; self.yaw_out = 1500
             self.rc_pub.publish(rc_msg)
             
