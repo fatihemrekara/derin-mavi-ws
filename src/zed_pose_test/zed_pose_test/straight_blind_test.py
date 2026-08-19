@@ -33,8 +33,8 @@ class StraightBlindTestNode(Node):
         
         self.declare_parameter('rc_override_topic', '/mavros/rc/override')
         self.declare_parameter('control_rate_hz', 20.0)
-        self.declare_parameter('fwd_pwm', 1700)        # Ileri yon throttle'i
-        self.declare_parameter('fwd_duration', 10.0)   # Kac saniye duz gidecek
+        self.declare_parameter('fwd_pwm', 1680)        # Ileri yon throttle'i
+        self.declare_parameter('fwd_duration', 25.0)   # Kac saniye duz gidecek
         self.declare_parameter('k_heading_fwd', 2.0)   # Ileri surus yaw P katsayisi
         
         gp = lambda n: self.get_parameter(n).value
@@ -165,15 +165,18 @@ class StraightBlindTestNode(Node):
         self.get_logger().info(f"--- STATE: {new_state} ---")
 
     def stop(self):
-        rc_msg = OverrideRCIn()
-        rc_msg.channels = [65535] * 18 
-        # Butun eksenlerde kontrolu birak
-        self.rc_pub.publish(rc_msg)
-        
-        if self.arm_client.wait_for_service(timeout_sec=0.5):
-            req = CommandBool.Request()
-            req.value = False
-            self.arm_client.call_async(req)
+        try:
+            rc_msg = OverrideRCIn()
+            rc_msg.channels = [65535] * 18 
+            # Butun eksenlerde kontrolu birak
+            self.rc_pub.publish(rc_msg)
+            
+            if self.arm_client.wait_for_service(timeout_sec=0.5):
+                req = CommandBool.Request()
+                req.value = False
+                self.arm_client.call_async(req)
+        except Exception:
+            pass
 
     def control_loop(self):
         now = self.get_clock().now()
