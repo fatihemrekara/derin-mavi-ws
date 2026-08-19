@@ -292,7 +292,7 @@ class BlindPathFollowerNode(Node):
         if self.state == 'DIVING':
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
-            rc_msg.channels[2] = 1400  # Dalış Gücü (aşağı bastır)
+            rc_msg.channels[2] = 1300  # Dalış Gücü (aşağı bastır) - 1400 yetersiz kaldığı için 1300'e çıkarıldı
             self.fwd_out = 1500; self.yaw_out = 1500
             self.rc_pub.publish(rc_msg)
             
