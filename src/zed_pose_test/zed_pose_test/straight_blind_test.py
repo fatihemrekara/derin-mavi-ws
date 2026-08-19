@@ -35,15 +35,17 @@ class StraightBlindTestNode(Node):
         self.declare_parameter('control_rate_hz', 20.0)
         self.declare_parameter('fwd_pwm', 1700)        # Ileri yon throttle'i
         self.declare_parameter('fwd_duration', 10.0)   # Kac saniye duz gidecek
+        self.declare_parameter('k_heading_fwd', 2.0)   # Ileri surus yaw P katsayisi
         
         gp = lambda n: self.get_parameter(n).value
         self.fwd_pwm = int(gp('fwd_pwm'))
         self.fwd_duration = float(gp('fwd_duration'))
+        self.k_heading_fwd = float(gp('k_heading_fwd'))
         rate = float(gp('control_rate_hz'))
         
         self.heading_rad = None
-        self.rel_alt = None
-        self.vfr_alt = None
+        self.ref_heading_rad = None
+        self.shutdown_requested = False
         
         # ZED logging vars
         self.zed_x = 0.0; self.zed_y = 0.0; self.zed_yaw = 0.0
@@ -207,7 +209,18 @@ class StraightBlindTestNode(Node):
         ])
         self.log_file.flush()
 
-        if self.state in ['DONE', 'SURFACING']:
+        if self.shutdown_requested:
+            self.stop()
+            return
+
+        if self.state == 'DONE':
+            return
+            
+        if self.state == 'SURFACING':
+            # Araç pozitif yüzerliliğe sahip olduğu için motorları kapatıp kendi çıkmasına izin veriyoruz
+            self.get_logger().info('Motorlar kapatildi. Arac kendi yuzerliligi ile yuzeye cikiyor...')
+            self.stop()
+            self.change_state('DONE')
             return
 
         # STARTING ve ARMING sensör verisine ihtiyaç duymaz — MAVROS topic'leri
@@ -254,68 +267,63 @@ class StraightBlindTestNode(Node):
         if self.state == 'DIVING':
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
-            rc_msg.channels[2] = 1200  
+            rc_msg.channels[2] = 1400  # 1200 cok agresif oldugu icin 1400 olarak revize edildi
             rc_msg.channels[3] = 1500  
             rc_msg.channels[4] = 1500  
             rc_msg.channels[5] = 1500  
             self.rc_pub.publish(rc_msg)
             
-            self.thr_out = 1200; self.fwd_out = 1500; self.yaw_out = 1500
+            self.thr_out = 1400; self.fwd_out = 1500; self.yaw_out = 1500
             
-            self.get_logger().info(f'Dalış: 1200 PWM, rel_alt: {self.rel_alt:.2f}m', throttle_duration_sec=2.0)
+            self.get_logger().info(f'Dalış: 1400 PWM, rel_alt: {self.rel_alt:.2f}m', throttle_duration_sec=2.0)
             
             if self.rel_alt < -1.0 or elapsed > 15.0:
+                self.ref_heading_rad = self.heading_rad
+                self.get_logger().info(f"Dalis bitti. Ref heading: {math.degrees(self.ref_heading_rad):.1f}")
                 self.change_state('FORWARD')
 
         elif self.state == 'FORWARD':
             if elapsed >= self.fwd_duration:
                 self.get_logger().info(f"Süre doldu! {self.fwd_duration} sn tamamlandı.")
-                self.stop()
+                # self.stop() SURFACING icinde cagirilacak
                 self.change_state('SURFACING')
                 return
                 
             depth_err = -1.0 - (self.rel_alt if self.rel_alt is not None else 0.0)
             pwm_thr = int(1450 + 300.0 * depth_err)
-            pwm_thr = max(1300, min(1700, pwm_thr))
+            pwm_thr = max(1300, min(1900, pwm_thr)) # Daha güçlü surface limiti eklendi (Pitch down baskısına karsi)
+            
+            # Yaw PID (CLOSED LOOP HEADING)
+            if self.ref_heading_rad is None:
+                self.ref_heading_rad = self.heading_rad
+                
+            yaw_err = normalize_angle(self.ref_heading_rad - self.heading_rad)
+            yaw_err_deg = math.degrees(yaw_err)
+            yaw_pwm_calc = int(1500 + (yaw_err_deg * self.k_heading_fwd))
+            yaw_pwm_calc = max(1400, min(1600, yaw_pwm_calc))
             
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
             rc_msg.channels[2] = pwm_thr
-            rc_msg.channels[3] = 1500
+            rc_msg.channels[3] = yaw_pwm_calc
             rc_msg.channels[4] = self.fwd_pwm
             rc_msg.channels[5] = 1500 
             
-            self.thr_out = pwm_thr; self.fwd_out = self.fwd_pwm; self.yaw_out = 1500
+            self.thr_out = pwm_thr; self.fwd_out = self.fwd_pwm; self.yaw_out = yaw_pwm_calc
             self.rc_pub.publish(rc_msg)
             
             self.get_logger().info(
-                f"Düz Gidiliyor... {self.fwd_duration - elapsed:.1f} s kaldı. Pwm(Thr, Fwd): ({pwm_thr}, {self.fwd_pwm})",
+                f"Düz Gidiliyor {self.fwd_duration - elapsed:.1f}s | Hdg Err: {yaw_err_deg:.1f} Yaw PWM: {yaw_pwm_calc} | Thr PWM: {pwm_thr}",
                 throttle_duration_sec=1.0)
 
-# Global referans
-_node = None
-
-def _signal_handler(sig, frame):
-    global _node
-    if _node is not None:
-        _node.get_logger().info("CTRL+C Algılandı! Araç acil durduruluyor...")
-        _node.stop()
-        if not _node.log_file.closed:
-            _node.log_file.close()
-    sys.exit(0)
-
 def main(args=None):
-    global _node
     rclpy.init(args=args)
     node = StraightBlindTestNode()
-    _node = node
-    
-    signal.signal(signal.SIGINT, _signal_handler)
-    signal.signal(signal.SIGTERM, _signal_handler)
 
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
+        node.get_logger().info("CTRL+C Algılandı! Kapanıyor...")
         pass
     except Exception as e:
         node.get_logger().error(f"Beklenmeyen hata: {e}")
