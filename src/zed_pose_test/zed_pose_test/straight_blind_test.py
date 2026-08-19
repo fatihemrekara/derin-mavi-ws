@@ -235,16 +235,8 @@ class StraightBlindTestNode(Node):
             has_alt = self.rel_alt is not None
             self.get_logger().info(f'Başlatılıyor... pusula={has_hdg}, rel_alt={has_alt}', throttle_duration_sec=2.0)
             if elapsed > 2.0 and has_hdg:
-                self.ref_heading_rad = self.heading_rad
-                self.get_logger().info(f'Ref Heading Kilitlendi: {math.degrees(self.ref_heading_rad):.1f}')
                 self.change_state('ARMING')
             return
-
-        yaw_pwm_calc = 1500
-        if self.ref_heading_rad is not None and self.heading_rad is not None:
-            yaw_err = normalize_angle(self.ref_heading_rad - self.heading_rad)
-            yaw_pwm_calc = int(1500 + (math.degrees(yaw_err) * self.k_heading_fwd))
-            yaw_pwm_calc = max(1400, min(1600, yaw_pwm_calc))
 
         if self.state == 'ARMING':
             if not hasattr(self, '_last_arm_attempt') or (now - self._last_arm_attempt).nanoseconds * 1e-9 > 2.0:
@@ -262,7 +254,7 @@ class StraightBlindTestNode(Node):
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
             rc_msg.channels[2] = 1500  # Throttle nötr
-            rc_msg.channels[3] = yaw_pwm_calc  # Basa bas PID aktif
+            rc_msg.channels[3] = 1500  # Yaw nötr
             rc_msg.channels[4] = 1500  # Forward nötr
             self.rc_pub.publish(rc_msg)
             
@@ -281,16 +273,18 @@ class StraightBlindTestNode(Node):
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
             rc_msg.channels[2] = 1400  # 1200 cok agresif oldugu icin 1400 olarak revize edildi
-            rc_msg.channels[3] = yaw_pwm_calc  
+            rc_msg.channels[3] = 1500  
             rc_msg.channels[4] = 1500  
             rc_msg.channels[5] = 1500  
             self.rc_pub.publish(rc_msg)
             
-            self.thr_out = 1400; self.fwd_out = 1500; self.yaw_out = yaw_pwm_calc
+            self.thr_out = 1400; self.fwd_out = 1500; self.yaw_out = 1500
             
-            self.get_logger().info(f'Dalış: 1400 PWM, rel_alt: {self.rel_alt:.2f}m, Yaw PWM: {yaw_pwm_calc}', throttle_duration_sec=2.0)
+            self.get_logger().info(f'Dalış: 1400 PWM, rel_alt: {self.rel_alt:.2f}m', throttle_duration_sec=2.0)
             
             if self.rel_alt < -1.0 or elapsed > 15.0:
+                self.ref_heading_rad = self.heading_rad
+                self.get_logger().info(f"Dalis bitti. Ref heading: {math.degrees(self.ref_heading_rad):.1f}")
                 self.change_state('FORWARD')
 
         elif self.state == 'FORWARD':
@@ -304,6 +298,15 @@ class StraightBlindTestNode(Node):
             pwm_thr = int(1450 + 300.0 * depth_err)
             pwm_thr = max(1300, min(1900, pwm_thr)) # Daha güçlü surface limiti eklendi (Pitch down baskısına karsi)
             
+            # Yaw PID (SADECE FORWARD'DA, YAW MAX +- 50)
+            yaw_pwm_calc = 1500
+            yaw_err_deg = 0.0
+            if self.ref_heading_rad is not None:
+                yaw_err = normalize_angle(self.ref_heading_rad - self.heading_rad)
+                yaw_err_deg = math.degrees(yaw_err)
+                yaw_pwm_calc = int(1500 + (yaw_err_deg * self.k_heading_fwd))
+                yaw_pwm_calc = max(1450, min(1550, yaw_pwm_calc))
+                
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
             rc_msg.channels[2] = pwm_thr
