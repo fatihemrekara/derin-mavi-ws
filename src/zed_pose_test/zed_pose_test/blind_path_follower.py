@@ -5,10 +5,10 @@ import math
 import csv
 import datetime
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
-from mavros_msgs.msg import OverrideRCIn, VfrHud
 from std_msgs.msg import Float64
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import Imu
+from diagnostic_msgs.msg import DiagnosticArray
 from mavros_msgs.srv import CommandBool, SetMode
 
 def quat_to_yaw(ox, oy, oz, ow):
@@ -91,6 +91,11 @@ class BlindPathFollowerNode(Node):
         
         self.ekf_x = 0.0; self.ekf_y = 0.0; self.ekf_z = 0.0; self.ekf_yaw = 0.0
         
+        self.zed_fps = 0.0
+        self.zed_pose_count = 0
+        self.last_fps_calc_time = None
+        self.zed_diag_msg = "OK"
+        
         self.state = 'WAITING_FOR_PATH'
         self.dive_start_time = None
         self.fwd_start_time = None
@@ -110,7 +115,8 @@ class BlindPathFollowerNode(Node):
             'zed_x', 'zed_y', 'zed_yaw_deg',
             'cube_ax', 'cube_ay', 'cube_az', 'cube_gx', 'cube_gy', 'cube_gz',
             'zed_ax', 'zed_ay', 'zed_az', 'zed_gx', 'zed_gy', 'zed_gz',
-            'ekf_x', 'ekf_y', 'ekf_z', 'ekf_yaw_deg'
+            'ekf_x', 'ekf_y', 'ekf_z', 'ekf_yaw_deg',
+            'zed_fps', 'zed_diag'
         ])
         
         latched = QoSProfile(
@@ -132,6 +138,7 @@ class BlindPathFollowerNode(Node):
         
         self.cube_imu_sub = self.create_subscription(Imu, '/mavros/imu/data', self.on_cube_imu, sensor_qos)
         self.zed_imu_sub = self.create_subscription(Imu, '/zed/zed_node/imu/data', self.on_zed_imu, sensor_qos)
+        self.diag_sub = self.create_subscription(DiagnosticArray, '/diagnostics', self.on_diagnostics, sensor_qos)
         
         self.rc_pub = self.create_publisher(OverrideRCIn, str(gp('rc_override_topic')), 10)
         self.arm_client = self.create_client(CommandBool, '/mavros/cmd/arming')
@@ -168,6 +175,7 @@ class BlindPathFollowerNode(Node):
 
     def on_zed_pose(self, msg: PoseStamped):
         """Sadece LOGLAMAK icin arka planda okunur, kontrole dahil edilmez."""
+        self.zed_pose_count += 1
         self.zed_x = msg.pose.position.x
         self.zed_y = msg.pose.position.y
         o = msg.pose.orientation
@@ -197,6 +205,18 @@ class BlindPathFollowerNode(Node):
         self.zed_gy = msg.angular_velocity.y
         self.zed_gz = msg.angular_velocity.z
 
+    def on_diagnostics(self, msg: DiagnosticArray):
+        errs = []
+        for status in msg.status:
+            if "zed" in status.name.lower() and status.level > 0:
+                clean_msg = status.message.replace(',', ';')
+                errs.append(f"LVL{status.level}:{clean_msg}")
+        
+        if errs:
+            self.zed_diag_msg = " | ".join(errs)
+        else:
+            self.zed_diag_msg = "OK"
+
     def stop(self):
         rc_msg = OverrideRCIn()
         rc_msg.channels = [65535] * 18
@@ -209,6 +229,16 @@ class BlindPathFollowerNode(Node):
 
     def control_loop(self):
         now = self.get_clock().now()
+        
+        # FPS Calculation
+        if self.last_fps_calc_time is None:
+            self.last_fps_calc_time = now
+        else:
+            dt = (now - self.last_fps_calc_time).nanoseconds * 1e-9
+            if dt >= 1.0:
+                self.zed_fps = self.zed_pose_count / dt
+                self.zed_pose_count = 0
+                self.last_fps_calc_time = now
         
         # LOGGING (20 hz)
         if self.heading_rad is not None:
@@ -233,7 +263,8 @@ class BlindPathFollowerNode(Node):
                 f"{self.cube_gx:.3f}", f"{self.cube_gy:.3f}", f"{self.cube_gz:.3f}",
                 f"{self.zed_ax:.3f}", f"{self.zed_ay:.3f}", f"{self.zed_az:.3f}",
                 f"{self.zed_gx:.3f}", f"{self.zed_gy:.3f}", f"{self.zed_gz:.3f}",
-                f"{self.ekf_x:.3f}", f"{self.ekf_y:.3f}", f"{self.ekf_z:.3f}", f"{math.degrees(self.ekf_yaw):.2f}"
+                f"{self.ekf_x:.3f}", f"{self.ekf_y:.3f}", f"{self.ekf_z:.3f}", f"{math.degrees(self.ekf_yaw):.2f}",
+                f"{self.zed_fps:.1f}", self.zed_diag_msg
             ])
             self.log_file.flush()
 
