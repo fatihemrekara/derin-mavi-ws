@@ -45,6 +45,8 @@ class StraightBlindTestNode(Node):
         
         self.heading_rad = None
         self.ref_heading_rad = None
+        self.rel_alt = None
+        self.vfr_alt = None
         self.shutdown_requested = False
         
         # ZED logging vars

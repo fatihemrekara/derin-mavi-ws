@@ -438,7 +438,7 @@ class HybridPathFollowerNode(Node):
 
         # P kontrol ile yaw PWM
         w = max(-self.w_max, min(self.w_max, self.k_heading * heading_err))
-        pwm_yaw = int(1500 + (w / self.w_max) * 200) if self.w_max > 0 else 1500
+        pwm_yaw = int(1500 - (w / self.w_max) * 200) if self.w_max > 0 else 1500
 
         # Derinlik kontrolü
         depth_err = self.target_depth - (self.rel_alt if self.rel_alt is not None else 0.0)
@@ -503,7 +503,7 @@ class HybridPathFollowerNode(Node):
         # ── Heading düzeltmesi (pusula ile kapalı çevrim) ──
         heading_err_fwd = normalize_angle(self.seg_ref_heading - self.heading_rad)
         w = max(-self.w_max, min(self.w_max, self.k_heading_fwd * heading_err_fwd))
-        pwm_yaw = int(1500 + (w / self.w_max) * 100) if self.w_max > 0 else 1500
+        pwm_yaw = int(1500 - (w / self.w_max) * 100) if self.w_max > 0 else 1500
         # Heading düzeltme daha yumuşak: max ±100 PWM (dönüşte ±200)
 
         # ── Derinlik kontrolü ──
