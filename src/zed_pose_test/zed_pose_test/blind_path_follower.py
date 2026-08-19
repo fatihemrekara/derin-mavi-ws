@@ -286,24 +286,24 @@ class BlindPathFollowerNode(Node):
             return
 
         if self.state == 'ARMING':
-            elapsed = (now - self.state_start_time).nanoseconds * 1e-9 if hasattr(self, 'state_start_time') else 0.0
+            if not hasattr(self, 'state_start_time'):
+                self.state_start_time = now
+            elapsed = (now - self.state_start_time).nanoseconds * 1e-9
             
-            # İlk 0.2 saniye içinde mod ve arm komutlarını gönder (referans: compass_dive_test.py)
-            if elapsed < 0.2:
-                if not hasattr(self, '_arm_sent'):
-                    if self.mode_client.wait_for_service(timeout_sec=0.5):
-                        req = SetMode.Request()
-                        req.custom_mode = 'ALT_HOLD'
-                        self.mode_client.call_async(req)
-                    if self.arm_client.wait_for_service(timeout_sec=0.5):
-                        req = CommandBool.Request()
-                        req.value = True
-                        self.arm_client.call_async(req)
-                    self._arm_sent = True
-                    self.state_start_time = now
-                    self.get_logger().info('Araç ALT_HOLD moduna alınıyor ve Arm ediliyor...')
+            # Her 2 saniyede bir ARM + mod komutunu tekrar gönder (tek sefer yetmeyebilir)
+            if not hasattr(self, '_last_arm_attempt') or (now - self._last_arm_attempt).nanoseconds * 1e-9 > 2.0:
+                self._last_arm_attempt = now
+                if self.mode_client.wait_for_service(timeout_sec=0.5):
+                    req = SetMode.Request()
+                    req.custom_mode = 'ALT_HOLD'
+                    self.mode_client.call_async(req)
+                if self.arm_client.wait_for_service(timeout_sec=0.5):
+                    req = CommandBool.Request()
+                    req.value = True
+                    self.arm_client.call_async(req)
+                self.get_logger().info(f'ALT_HOLD + ARM komutu gönderildi (deneme, elapsed={elapsed:.1f}s)')
             
-            # 2 saniye boyunca güvenlik PWM'i gönder (ArduSub'ın modu kabul etmesini bekle)
+            # Güvenlik PWM'i gönder
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
             rc_msg.channels[2] = 1500  # Throttle nötr
@@ -311,7 +311,7 @@ class BlindPathFollowerNode(Node):
             rc_msg.channels[4] = 1500  # Forward nötr
             self.rc_pub.publish(rc_msg)
             
-            if elapsed > 2.0:
+            if elapsed > 4.0:
                 self.state = 'DIVING'
                 self.dive_start_time = now
                 self.get_logger().info('Araç hazır! Otonom dalış başlıyor (1250 PWM, ALT_HOLD)...')
@@ -325,20 +325,41 @@ class BlindPathFollowerNode(Node):
             rc_msg.channels[2] = 1250  # Dalış Gücü (Heave)
             rc_msg.channels[3] = 1500  # Yaw
             rc_msg.channels[4] = 1500  # Forward
-            rc_msg.channels[5] = 1500  # Sway (Yanal - referans koda eklendiği gibi)
+            rc_msg.channels[5] = 1500  # Sway
             
             self.fwd_out = 1500; self.yaw_out = 1500
             self.rc_pub.publish(rc_msg)
             
             elapsed = (now - self.dive_start_time).nanoseconds * 1e-9
-            # rel_alt negatif yonde artiyorsa (su altina indiysek) -1 yapalim
+            self.get_logger().info(f'Dalış devam ediyor... rel_alt: {self.rel_alt:.2f}m, süre: {elapsed:.1f}s', throttle_duration_sec=2.0)
+            
             if elapsed > 30.0 or self.rel_alt < -1.0:
-                if self.mode_client.wait_for_service(timeout_sec=1.0):
-                    req = SetMode.Request()
-                    req.custom_mode = 'ALT_HOLD'
-                    self.mode_client.call_async(req)
+                self.state = 'DEPTH_STABILIZE'
+                self._depth_stable_start = now
+                self.get_logger().info(f'Hedef derinliğe ulaşıldı (rel_alt: {self.rel_alt:.2f}m). Derinlik sabitleniyor...')
+            return
+        
+        if self.state == 'DEPTH_STABILIZE':
+            # Aktif PID ile -1.0m derinliği koru (pozitif buoyancy'yi yenmek için)
+            depth_err = -1.0 - (self.rel_alt if self.rel_alt is not None else 0.0)
+            pwm_thr = int(1450 + 300.0 * depth_err)
+            pwm_thr = max(1200, min(1700, pwm_thr))
+            
+            rc_msg = OverrideRCIn()
+            rc_msg.channels = [65535] * 18
+            rc_msg.channels[2] = pwm_thr
+            rc_msg.channels[3] = 1500
+            rc_msg.channels[4] = 1500
+            rc_msg.channels[5] = 1500
+            self.rc_pub.publish(rc_msg)
+            
+            elapsed = (now - self._depth_stable_start).nanoseconds * 1e-9
+            self.get_logger().info(f'Derinlik sabitleniyor... rel_alt: {self.rel_alt:.2f}m, thr_pwm: {pwm_thr}, süre: {elapsed:.1f}s', throttle_duration_sec=2.0)
+            
+            # 5 saniye stabil bekle, sonra rota takibine geç
+            if elapsed > 5.0:
                 self.state = 'ROTATING'
-                self.get_logger().info(f'Dalış tamamlandı (rel_alt: {self.rel_alt:.2f}m). Rota takibine başlanıyor!')
+                self.get_logger().info(f'Derinlik sabit! Rota takibine başlanıyor.')
             return
 
         if self.wp_idx >= len(self.macro_segments) - 1:

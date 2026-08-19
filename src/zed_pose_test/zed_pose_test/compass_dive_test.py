@@ -126,18 +126,18 @@ class CompassDiveLogger(Node):
                 self.change_state('ARMING')
                 
         elif self.state == 'ARMING':
-            # Aracı MANUAL moda alıp Arm edelim (dalış için MANUAL mod gerekli)
-            if elapsed < 0.2:
+            # Her 2 saniyede bir ARM + mod komutunu tekrar gönder
+            if not hasattr(self, '_last_arm_attempt') or (now - self._last_arm_attempt).nanoseconds * 1e-9 > 2.0:
+                self._last_arm_attempt = now
                 if self.mode_client.wait_for_service(timeout_sec=0.5):
                     req = SetMode.Request()
                     req.custom_mode = 'ALT_HOLD'
                     self.mode_client.call_async(req)
-                    self.get_logger().info("ALT_HOLD moda geciliyor (dalis icin)")
                 if self.arm_client.wait_for_service(timeout_sec=0.5):
                     req = CommandBool.Request()
                     req.value = True
                     self.arm_client.call_async(req)
-                    self.get_logger().info("ARM komutu gonderildi")
+                self.get_logger().info(f"ALT_HOLD + ARM komutu gonderildi (elapsed={elapsed:.1f}s)")
             
             # Güvenlik için boş PWM gönderelim
             rc = OverrideRCIn()
@@ -147,11 +147,11 @@ class CompassDiveLogger(Node):
             rc.channels[4] = 1500  # Fwd nötr
             self.rc_pub.publish(rc)
 
-            if elapsed > 2.0:
+            if elapsed > 4.0:
                 self.change_state('DIVING')
                 
         elif self.state == 'DIVING':
-            # MANUAL modda throttle'ı düşürerek dalış yapıyoruz
+            # ALT_HOLD modda throttle'ı düşürerek dalış yapıyoruz
             rc = OverrideRCIn()
             rc.channels = [65535] * 18
             rc.channels[2] = self.DIVE_THROTTLE  # Dalış thrust
@@ -159,26 +159,28 @@ class CompassDiveLogger(Node):
             rc.channels[4] = 1500  # Fwd neutral
             self.rc_pub.publish(rc)
             
-            self.get_logger().info(f"  Dalis: throttle={self.DIVE_THROTTLE}, rel_alt={self.rel_alt:.2f}", throttle=False)
+            self.get_logger().info(f"  Dalis: throttle={self.DIVE_THROTTLE}, rel_alt={self.rel_alt:.2f}", throttle_duration_sec=2.0)
             
-            # Hedef derinliğe ulaştıysa veya timeout olduysa ALT_HOLD'a geç
+            # Hedef derinliğe ulaştıysa veya timeout olduysa derinlik sabitlemesine geç
             if self.rel_alt < self.TARGET_DEPTH or elapsed > self.DIVE_TIMEOUT:
                 reason = "hedef derinlik" if self.rel_alt < self.TARGET_DEPTH else "zaman asimi"
-                self.get_logger().info(f"Dalis tamamlandi ({reason}). ALT_HOLD'a geciliyor...")
-                if self.mode_client.wait_for_service(timeout_sec=0.5):
-                    req = SetMode.Request()
-                    req.custom_mode = 'ALT_HOLD'
-                    self.mode_client.call_async(req)
+                self.get_logger().info(f"Dalis tamamlandi ({reason}). Derinlik sabitleniyor...")
                 self.change_state('HOLDING')
                 
         elif self.state == 'HOLDING':
-            # ALT_HOLD modunda derinliği korumak için throttle neutral'a (1500) çekilir
+            # Aktif PID ile derinliği koru (pozitif buoyancy'yi yenmek için)
+            depth_err = self.TARGET_DEPTH - self.rel_alt
+            pwm_thr = int(1450 + 300.0 * depth_err)
+            pwm_thr = max(1200, min(1700, pwm_thr))
+            
             rc = OverrideRCIn()
             rc.channels = [65535] * 18
-            rc.channels[2] = 1500
+            rc.channels[2] = pwm_thr
             rc.channels[3] = 1500
             rc.channels[4] = 1500
             self.rc_pub.publish(rc)
+            
+            self.get_logger().info(f"Derinlik korunuyor: rel_alt={self.rel_alt:.2f}m, thr_pwm={pwm_thr}", throttle_duration_sec=2.0)
             
             if elapsed > self.HOLD_DURATION:
                 self.change_state('STOPPING_MOTORS')
