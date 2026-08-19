@@ -38,7 +38,7 @@ class CompassDiveLogger(Node):
         self.state_start_time = self.get_clock().now()
         
         # ========== DALIS PARAMETRELERI ==========
-        self.DIVE_THROTTLE = 1300     # Dalış thrust değeri (1500=nötr, düşük=aşağı). 1400 yetmiyorsa 1300 dene.
+        self.DIVE_THROTTLE = 1250     # Dalış thrust değeri (1500=nötr, düşük=aşağı).
         self.TARGET_DEPTH = -1.0      # Hedef derinlik (metre, negatif = su altı)
         self.DIVE_TIMEOUT = 15.0      # Maksimum dalış süresi (saniye)
         self.HOLD_DURATION = 5.0      # Derinlikte bekleme süresi (saniye)

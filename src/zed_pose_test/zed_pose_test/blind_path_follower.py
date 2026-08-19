@@ -293,7 +293,7 @@ class BlindPathFollowerNode(Node):
                 if not hasattr(self, '_arm_sent'):
                     if self.mode_client.wait_for_service(timeout_sec=0.5):
                         req = SetMode.Request()
-                        req.custom_mode = 'ALT_HOLD'
+                        req.custom_mode = 'MANUAL'
                         self.mode_client.call_async(req)
                     if self.arm_client.wait_for_service(timeout_sec=0.5):
                         req = CommandBool.Request()
@@ -301,7 +301,7 @@ class BlindPathFollowerNode(Node):
                         self.arm_client.call_async(req)
                     self._arm_sent = True
                     self.state_start_time = now
-                    self.get_logger().info('Araç ALT_HOLD moduna alınıyor ve Arm ediliyor...')
+                    self.get_logger().info('Araç MANUAL moduna alınıyor ve Arm ediliyor (dalış için)...')
             
             # 2 saniye boyunca güvenlik PWM'i gönder (ArduSub'ın modu kabul etmesini bekle)
             rc_msg = OverrideRCIn()
@@ -314,15 +314,15 @@ class BlindPathFollowerNode(Node):
             if elapsed > 2.0:
                 self.state = 'DIVING'
                 self.dive_start_time = now
-                self.get_logger().info('Araç hazır! Otonom dalış başlıyor (1400 PWM)...')
+                self.get_logger().info('Araç hazır! Otonom dalış başlıyor (1250 PWM, MANUAL mod)...')
             return
             
         if self.state == 'DIVING':
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
             
-            # Tamamen çalışan referans koddaki (line_controller_node) eşleştirme
-            rc_msg.channels[2] = 1400  # Dalış Gücü (Heave)
+            # MANUAL modda doğrudan motor kontrolü - 1250 PWM ile dalış
+            rc_msg.channels[2] = 1250  # Dalış Gücü (Heave) - 1400 yetmiyordu
             rc_msg.channels[3] = 1500  # Yaw
             rc_msg.channels[4] = 1500  # Forward
             rc_msg.channels[5] = 1500  # Sway (Yanal - referans koda eklendiği gibi)
