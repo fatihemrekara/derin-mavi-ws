@@ -55,6 +55,10 @@ class StraightBlindTestNode(Node):
         self.cube_gx = 0.0; self.cube_gy = 0.0; self.cube_gz = 0.0
         self.zed_ax = 0.0; self.zed_ay = 0.0; self.zed_az = 0.0
         self.zed_gx = 0.0; self.zed_gy = 0.0; self.zed_gz = 0.0
+        self.zed_ax_raw = 0.0; self.zed_ay_raw = 0.0; self.zed_az_raw = 0.0
+        self.zed_gx_raw = 0.0; self.zed_gy_raw = 0.0; self.zed_gz_raw = 0.0
+        self.zed_ax_raw = 0.0; self.zed_ay_raw = 0.0; self.zed_az_raw = 0.0
+        self.zed_gx_raw = 0.0; self.zed_gy_raw = 0.0; self.zed_gz_raw = 0.0
         self.ekf_x = 0.0; self.ekf_y = 0.0; self.ekf_z = 0.0; self.ekf_yaw = 0.0
         
         self.zed_fps = 0.0
@@ -81,6 +85,7 @@ class StraightBlindTestNode(Node):
             'zed_x', 'zed_y', 'zed_yaw_deg',
             'cube_ax', 'cube_ay', 'cube_az', 'cube_gx', 'cube_gy', 'cube_gz',
             'zed_ax', 'zed_ay', 'zed_az', 'zed_gx', 'zed_gy', 'zed_gz',
+            'zed_ax_raw', 'zed_ay_raw', 'zed_az_raw', 'zed_gx_raw', 'zed_gy_raw', 'zed_gz_raw',
             'ekf_x', 'ekf_y', 'ekf_z', 'ekf_yaw_deg',
             'zed_fps', 'zed_diag'
         ])
@@ -97,6 +102,7 @@ class StraightBlindTestNode(Node):
         
         self.cube_imu_sub = self.create_subscription(Imu, '/mavros/imu/data', self.on_cube_imu, sensor_qos)
         self.zed_imu_sub = self.create_subscription(Imu, '/zed/zed_node/imu/data', self.on_zed_imu, sensor_qos)
+        self.zed_imu_raw_sub = self.create_subscription(Imu, '/zed/zed_node/imu/data_raw', self.on_zed_imu_raw, sensor_qos)
         self.diag_sub = self.create_subscription(DiagnosticArray, '/diagnostics', self.on_diagnostics, sensor_qos)
         
         self.rc_pub = self.create_publisher(OverrideRCIn, str(gp('rc_override_topic')), 10)
@@ -145,6 +151,22 @@ class StraightBlindTestNode(Node):
         self.zed_gx = msg.angular_velocity.x
         self.zed_gy = msg.angular_velocity.y
         self.zed_gz = msg.angular_velocity.z
+
+    def on_zed_imu_raw(self, msg: Imu):
+        self.zed_ax_raw = msg.linear_acceleration.x
+        self.zed_ay_raw = msg.linear_acceleration.y
+        self.zed_az_raw = msg.linear_acceleration.z
+        self.zed_gx_raw = msg.angular_velocity.x
+        self.zed_gy_raw = msg.angular_velocity.y
+        self.zed_gz_raw = msg.angular_velocity.z
+
+    def on_zed_imu_raw(self, msg: Imu):
+        self.zed_ax_raw = msg.linear_acceleration.x
+        self.zed_ay_raw = msg.linear_acceleration.y
+        self.zed_az_raw = msg.linear_acceleration.z
+        self.zed_gx_raw = msg.angular_velocity.x
+        self.zed_gy_raw = msg.angular_velocity.y
+        self.zed_gz_raw = msg.angular_velocity.z
 
     def on_diagnostics(self, msg: DiagnosticArray):
         errs = []
@@ -209,6 +231,8 @@ class StraightBlindTestNode(Node):
             f"{self.cube_gx:.3f}", f"{self.cube_gy:.3f}", f"{self.cube_gz:.3f}",
             f"{self.zed_ax:.3f}", f"{self.zed_ay:.3f}", f"{self.zed_az:.3f}",
             f"{self.zed_gx:.3f}", f"{self.zed_gy:.3f}", f"{self.zed_gz:.3f}",
+            f"{self.zed_ax_raw:.3f}", f"{self.zed_ay_raw:.3f}", f"{self.zed_az_raw:.3f}",
+            f"{self.zed_gx_raw:.3f}", f"{self.zed_gy_raw:.3f}", f"{self.zed_gz_raw:.3f}",
             f"{self.ekf_x:.3f}", f"{self.ekf_y:.3f}", f"{self.ekf_z:.3f}", f"{math.degrees(self.ekf_yaw):.2f}",
             f"{self.zed_fps:.1f}", self.zed_diag_msg
         ])
@@ -270,21 +294,28 @@ class StraightBlindTestNode(Node):
             return
 
         if self.state == 'DIVING':
+            # Dalışta aracı sabit tutmak için çok hafif ve kısıtlı Yaw müdahalesi (1470-1530)
+            yaw_pwm_calc = 1500
+            if self.ref_heading_rad is not None and self.heading_rad is not None:
+                yaw_err = normalize_angle(self.ref_heading_rad - self.heading_rad)
+                yaw_pwm_calc = int(1500 + (math.degrees(yaw_err) * self.k_heading_fwd))
+                yaw_pwm_calc = max(1470, min(1530, yaw_pwm_calc))
+
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
             rc_msg.channels[2] = 1400  # 1200 cok agresif oldugu icin 1400 olarak revize edildi
-            rc_msg.channels[3] = 1500  
+            rc_msg.channels[3] = yaw_pwm_calc  
             rc_msg.channels[4] = 1500  
             rc_msg.channels[5] = 1500  
             self.rc_pub.publish(rc_msg)
             
-            self.thr_out = 1400; self.fwd_out = 1500; self.yaw_out = 1500
+            self.thr_out = 1400; self.fwd_out = 1500; self.yaw_out = yaw_pwm_calc
             
-            self.get_logger().info(f'Dalış: 1400 PWM, rel_alt: {self.rel_alt:.2f}m', throttle_duration_sec=2.0)
+            self.get_logger().info(f'Dalış: 1400 PWM, rel_alt: {self.rel_alt:.2f}m, Yaw: {yaw_pwm_calc}', throttle_duration_sec=2.0)
             
             if self.rel_alt < -1.0 or elapsed > 15.0:
                 self.ref_heading_rad = self.heading_rad
-                self.get_logger().info(f"Dalis bitti. Ref heading: {math.degrees(self.ref_heading_rad):.1f}")
+                self.get_logger().info(f"Dalis bitti. Ref heading guncellendi: {math.degrees(self.ref_heading_rad):.1f}")
                 self.change_state('FORWARD')
 
         elif self.state == 'FORWARD':
