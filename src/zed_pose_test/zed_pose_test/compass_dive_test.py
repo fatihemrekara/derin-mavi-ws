@@ -130,9 +130,9 @@ class CompassDiveLogger(Node):
             if elapsed < 0.2:
                 if self.mode_client.wait_for_service(timeout_sec=0.5):
                     req = SetMode.Request()
-                    req.custom_mode = 'MANUAL'
+                    req.custom_mode = 'ALT_HOLD'
                     self.mode_client.call_async(req)
-                    self.get_logger().info("MANUAL moda geciliyor (dalis icin)")
+                    self.get_logger().info("ALT_HOLD moda geciliyor (dalis icin)")
                 if self.arm_client.wait_for_service(timeout_sec=0.5):
                     req = CommandBool.Request()
                     req.value = True
