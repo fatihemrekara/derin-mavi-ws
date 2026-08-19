@@ -288,7 +288,7 @@ class BlindPathFollowerNode(Node):
         if self.state == 'ARMING':
             if self.mode_client.wait_for_service(timeout_sec=1.0):
                 req = SetMode.Request()
-                req.custom_mode = 'ALT_HOLD'
+                req.custom_mode = 'STABILIZE'
                 self.mode_client.call_async(req)
                 
             if self.arm_client.wait_for_service(timeout_sec=1.0):
@@ -297,7 +297,7 @@ class BlindPathFollowerNode(Node):
                 self.arm_client.call_async(req)
             self.state = 'DIVING'
             self.dive_start_time = now
-            self.get_logger().info('Araç ALT_HOLD moduna alındı ve Arm edildi. Pürüzsüz dalış başlıyor...')
+            self.get_logger().info('Araç STABILIZE moduna alındı ve Arm edildi. Pürüzsüz ama güçlü dalış başlıyor...')
             return
             
         if self.state == 'DIVING':
@@ -307,13 +307,17 @@ class BlindPathFollowerNode(Node):
             rc_msg.channels[1] = 1500  # Roll Kilitli
             rc_msg.channels[3] = 1500  # Yaw Kilitli
             rc_msg.channels[4] = 1500  # İleri-Geri Kilitli
-            rc_msg.channels[2] = 1200  # Dalış Gücü (Kullanıcı talebi üzerine 1200 yapıldı)
+            rc_msg.channels[2] = 1250  # Dalış Gücü (STABILIZE modunda doğrudan motora gider, çok çok güçlüdür)
             self.fwd_out = 1500; self.yaw_out = 1500
             self.rc_pub.publish(rc_msg)
             
             elapsed = (now - self.dive_start_time).nanoseconds * 1e-9
             # rel_alt negatif yonde artiyorsa (su altina indiysek) -1 yapalim
-            if elapsed > 40.0 or self.rel_alt < -1.0:
+            if elapsed > 30.0 or self.rel_alt < -1.0:
+                if self.mode_client.wait_for_service(timeout_sec=1.0):
+                    req = SetMode.Request()
+                    req.custom_mode = 'ALT_HOLD'
+                    self.mode_client.call_async(req)
                 self.state = 'ROTATING'
                 self.get_logger().info(f'Dalış tamamlandı (rel_alt: {self.rel_alt:.2f}m). Rota takibine başlanıyor!')
             return
