@@ -57,6 +57,7 @@ setup(
             'compass_dive_test = zed_pose_test.compass_dive_test:main',
             'compass_circle_test = zed_pose_test.compass_circle_test:main',
             'straight_blind_test = zed_pose_test.straight_blind_test:main',
+            'square_blind_test = zed_pose_test.square_blind_test:main',
         ],
     },
 )
