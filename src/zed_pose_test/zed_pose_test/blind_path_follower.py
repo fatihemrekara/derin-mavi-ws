@@ -332,9 +332,13 @@ class BlindPathFollowerNode(Node):
             w = max(-self.w_max, min(self.w_max, self.k_heading * heading_err))
             pwm_yaw = int(1500 - (w / self.w_max) * 200) if self.w_max > 0 else 1500
             
+            # Aktif Derinlik Kontrolü (-1.0 metre hedefini korumak için)
+            depth_err = -1.0 - (self.rel_alt if self.rel_alt is not None else 0.0)
+            pwm_thr = int(1500 + 250.0 * depth_err) 
+            
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
-            rc_msg.channels[2] = 1500
+            rc_msg.channels[2] = max(1300, min(1700, pwm_thr))
             rc_msg.channels[3] = max(1100, min(1900, pwm_yaw))
             rc_msg.channels[4] = 1500  # Stop fwd
             
@@ -355,9 +359,13 @@ class BlindPathFollowerNode(Node):
             # İleri giderken baş açısı kontrolü tamamen kapalı (kullanıcı talebi)
             pwm_yaw = 1500
             
+            # Aktif Derinlik Kontrolü (-1.0 metre hedefini korumak için)
+            depth_err = -1.0 - (self.rel_alt if self.rel_alt is not None else 0.0)
+            pwm_thr = int(1500 + 250.0 * depth_err)
+            
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
-            rc_msg.channels[2] = 1500
+            rc_msg.channels[2] = max(1300, min(1700, pwm_thr))
             rc_msg.channels[3] = max(1100, min(1900, pwm_yaw))
             rc_msg.channels[4] = self.fwd_pwm
             
