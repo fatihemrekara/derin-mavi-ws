@@ -10,6 +10,8 @@ from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import Imu
 from diagnostic_msgs.msg import DiagnosticArray
 from mavros_msgs.srv import CommandBool, SetMode
+from nav_msgs.msg import Path
+from mavros_msgs.msg import VfrHud, OverrideRCIn
 
 def quat_to_yaw(ox, oy, oz, ow):
     siny_cosp = 2.0 * (ow * oz + ox * oy)
