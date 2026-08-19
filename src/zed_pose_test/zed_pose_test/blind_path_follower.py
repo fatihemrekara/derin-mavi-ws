@@ -210,9 +210,10 @@ class BlindPathFollowerNode(Node):
     def on_diagnostics(self, msg: DiagnosticArray):
         errs = []
         for status in msg.status:
-            if "zed" in status.name.lower() and status.level > 0:
+            lvl = status.level[0] if isinstance(status.level, bytes) else status.level
+            if "zed" in status.name.lower() and lvl > 0:
                 clean_msg = status.message.replace(',', ';')
-                errs.append(f"LVL{status.level}:{clean_msg}")
+                errs.append(f"LVL{lvl}:{clean_msg}")
         
         if errs:
             self.zed_diag_msg = " | ".join(errs)
