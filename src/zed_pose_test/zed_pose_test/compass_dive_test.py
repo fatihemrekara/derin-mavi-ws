@@ -151,36 +151,32 @@ class CompassDiveLogger(Node):
                 self.change_state('DIVING')
                 
         elif self.state == 'DIVING':
-            # ALT_HOLD modda throttle'ı düşürerek dalış yapıyoruz
+            # Sabit 1200 PWM ile dalış — basınç sensörü hedef derinliği okuyana kadar
             rc = OverrideRCIn()
             rc.channels = [65535] * 18
-            rc.channels[2] = self.DIVE_THROTTLE  # Dalış thrust
+            rc.channels[2] = 1200  # Sabit dalış gücü
             rc.channels[3] = 1500  # Yaw neutral
             rc.channels[4] = 1500  # Fwd neutral
             self.rc_pub.publish(rc)
             
-            self.get_logger().info(f"  Dalis: throttle={self.DIVE_THROTTLE}, rel_alt={self.rel_alt:.2f}", throttle_duration_sec=2.0)
+            self.get_logger().info(f"  Dalis: 1200 PWM, rel_alt={self.rel_alt:.2f}m", throttle_duration_sec=2.0)
             
-            # Hedef derinliğe ulaştıysa veya timeout olduysa derinlik sabitlemesine geç
+            # Basınç sensörü hedef derinliği okuyana kadar veya timeout
             if self.rel_alt < self.TARGET_DEPTH or elapsed > self.DIVE_TIMEOUT:
                 reason = "hedef derinlik" if self.rel_alt < self.TARGET_DEPTH else "zaman asimi"
-                self.get_logger().info(f"Dalis tamamlandi ({reason}). Derinlik sabitleniyor...")
+                self.get_logger().info(f"Dalis tamamlandi ({reason}). ALT_HOLD derinligi koruyacak.")
                 self.change_state('HOLDING')
                 
         elif self.state == 'HOLDING':
-            # Aktif PID ile derinliği koru (pozitif buoyancy'yi yenmek için)
-            depth_err = self.TARGET_DEPTH - self.rel_alt
-            pwm_thr = int(1450 + 300.0 * depth_err)
-            pwm_thr = max(1200, min(1700, pwm_thr))
-            
+            # ALT_HOLD modunda throttle 1500 = Orange Cube derinliği korusun
             rc = OverrideRCIn()
             rc.channels = [65535] * 18
-            rc.channels[2] = pwm_thr
+            rc.channels[2] = 1500  # Nötr — ALT_HOLD derinliği kendi koruyor
             rc.channels[3] = 1500
             rc.channels[4] = 1500
             self.rc_pub.publish(rc)
             
-            self.get_logger().info(f"Derinlik korunuyor: rel_alt={self.rel_alt:.2f}m, thr_pwm={pwm_thr}", throttle_duration_sec=2.0)
+            self.get_logger().info(f"ALT_HOLD derinlik koruması: rel_alt={self.rel_alt:.2f}m", throttle_duration_sec=2.0)
             
             if elapsed > self.HOLD_DURATION:
                 self.change_state('STOPPING_MOTORS')

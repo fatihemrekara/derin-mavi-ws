@@ -321,8 +321,8 @@ class BlindPathFollowerNode(Node):
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
             
-            # ALT_HOLD modda 1250 PWM ile dalış
-            rc_msg.channels[2] = 1250  # Dalış Gücü (Heave)
+            # Sabit 1200 PWM ile dalış — basınç sensörü -1m okuyana kadar
+            rc_msg.channels[2] = 1200  # Dalış Gücü
             rc_msg.channels[3] = 1500  # Yaw
             rc_msg.channels[4] = 1500  # Forward
             rc_msg.channels[5] = 1500  # Sway
@@ -331,35 +331,11 @@ class BlindPathFollowerNode(Node):
             self.rc_pub.publish(rc_msg)
             
             elapsed = (now - self.dive_start_time).nanoseconds * 1e-9
-            self.get_logger().info(f'Dalış devam ediyor... rel_alt: {self.rel_alt:.2f}m, süre: {elapsed:.1f}s', throttle_duration_sec=2.0)
+            self.get_logger().info(f'Dalış: 1200 PWM, rel_alt: {self.rel_alt:.2f}m, süre: {elapsed:.1f}s', throttle_duration_sec=2.0)
             
             if elapsed > 30.0 or self.rel_alt < -1.0:
-                self.state = 'DEPTH_STABILIZE'
-                self._depth_stable_start = now
-                self.get_logger().info(f'Hedef derinliğe ulaşıldı (rel_alt: {self.rel_alt:.2f}m). Derinlik sabitleniyor...')
-            return
-        
-        if self.state == 'DEPTH_STABILIZE':
-            # Aktif PID ile -1.0m derinliği koru (pozitif buoyancy'yi yenmek için)
-            depth_err = -1.0 - (self.rel_alt if self.rel_alt is not None else 0.0)
-            pwm_thr = int(1450 + 300.0 * depth_err)
-            pwm_thr = max(1200, min(1700, pwm_thr))
-            
-            rc_msg = OverrideRCIn()
-            rc_msg.channels = [65535] * 18
-            rc_msg.channels[2] = pwm_thr
-            rc_msg.channels[3] = 1500
-            rc_msg.channels[4] = 1500
-            rc_msg.channels[5] = 1500
-            self.rc_pub.publish(rc_msg)
-            
-            elapsed = (now - self._depth_stable_start).nanoseconds * 1e-9
-            self.get_logger().info(f'Derinlik sabitleniyor... rel_alt: {self.rel_alt:.2f}m, thr_pwm: {pwm_thr}, süre: {elapsed:.1f}s', throttle_duration_sec=2.0)
-            
-            # 5 saniye stabil bekle, sonra rota takibine geç
-            if elapsed > 5.0:
                 self.state = 'ROTATING'
-                self.get_logger().info(f'Derinlik sabit! Rota takibine başlanıyor.')
+                self.get_logger().info(f'Hedef derinliğe ulaşıldı (rel_alt: {self.rel_alt:.2f}m). ALT_HOLD derinliği koruyacak, rota takibine geçiliyor.')
             return
 
         if self.wp_idx >= len(self.macro_segments) - 1:
