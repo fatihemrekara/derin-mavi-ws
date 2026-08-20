@@ -38,8 +38,8 @@ def pick_tangent(p, c, r, ref, logger, label):
     v_pc = (c[0] - p[0], c[1] - p[1])
     side_ref = cross2(v_pc[0], v_pc[1], ref[0] - p[0], ref[1] - p[1])
     side_t1 = cross2(v_pc[0], v_pc[1], t1[0] - p[0], t1[1] - p[1])
-    if abs(side_ref) < 1e-9:
-        logger.warn(f'{label}: ref merkezde')
+    if abs(side_ref) < 1e-3:
+        # Toleransi biraz genis tuttuk (1e-3) ki asiri yakin/dogrusal noktalarda cildirip diger tegete sicramasin
         return t1
     return t1 if side_ref * side_t1 > 0 else t2
 
@@ -222,8 +222,25 @@ class SquareRoutePlannerNode(Node):
         # Bu durumda ekstra tura gerek yoktur, sadece cok dolanir ve dugum olur (sizin 'cok dolanmis' tespitiniz).
         # Ancak, 0,0 - 0,0 durumunda oldugu gibi raw_sweep 0 marta dusuyorsa, aracin mecburen "tam tur" atip geri donmesi gerekir.
         # Bu yuzden SADECE yay 0 ise ona bir tam kare turlama veriyoruz (4 quadrants = 360 derece).
+        # Dogrusal gecis tespiti (Collinear Bypass): Arac duz yolda giderken onundeki samandiranin koseli etrafindan dolanmadan sadece tegetinden hafifce kayarak gecer.
+        vec_sb = (buoy[0] - start[0], buoy[1] - start[1])
+        vec_be = (end[0] - buoy[0], end[1] - buoy[1])
+        nsb = math.hypot(vec_sb[0], vec_sb[1])
+        nbe = math.hypot(vec_be[0], vec_be[1])
+        
+        is_straight = False
+        if nsb > 1e-3 and nbe > 1e-3:
+            dot_prod = vec_sb[0]*vec_be[0] + vec_sb[1]*vec_be[1]
+            cos_a = dot_prod / (nsb * nbe)
+            if cos_a > 0.985:  # Acinin neredeyse sifir olmasi (duz cizgi) gidisati (-10 ile +10 derece arasi sapma toleransi)
+                is_straight = True
+                
         quadrants = math.ceil(abs(raw_sweep) / (math.pi / 2.0))
-        if quadrants == 0:
+        
+        if is_straight:
+            quadrants = 4
+            log.info(">>> Dogrusal (Collinear) gecis rotasi tespit edildi. Kural geregi aracin samandira etrafinda TAM KARE alan (360 derece) tam tur cizmesi saglanacak. <<<")
+        elif quadrants == 0:
             quadrants = 4  # 0,0 durumu icin tam 4 kosesi cizmeye zorla!
             
         sweep = quadrants * (math.pi / 2.0) * (1.0 if ccw else -1.0)

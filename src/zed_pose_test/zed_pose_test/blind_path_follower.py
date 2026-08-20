@@ -6,10 +6,12 @@ import csv
 import datetime
 import signal
 import sys
+import os
+import struct
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
 from std_msgs.msg import Float64
 from geometry_msgs.msg import PoseStamped
-from sensor_msgs.msg import Imu
+from sensor_msgs.msg import Imu, Image
 from diagnostic_msgs.msg import DiagnosticArray
 from mavros_msgs.srv import CommandBool, SetMode
 from nav_msgs.msg import Path
@@ -93,6 +95,10 @@ class BlindPathFollowerNode(Node):
         self.zed_ax = 0.0; self.zed_ay = 0.0; self.zed_az = 0.0
         self.zed_gx = 0.0; self.zed_gy = 0.0; self.zed_gz = 0.0
         
+        self.zed_ax_raw = 0.0; self.zed_ay_raw = 0.0; self.zed_az_raw = 0.0
+        self.zed_gx_raw = 0.0; self.zed_gy_raw = 0.0; self.zed_gz_raw = 0.0
+        self.zed_center_depth = 0.0
+        
         self.ekf_x = 0.0; self.ekf_y = 0.0; self.ekf_z = 0.0; self.ekf_yaw = 0.0
         
         self.zed_fps = 0.0
@@ -106,19 +112,22 @@ class BlindPathFollowerNode(Node):
         
         self.fwd_out = 1500
         self.yaw_out = 1500
+        self.thr_out = 1500
         
         # CSV Logging Setup
         stamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        self.log_filename = f'blind_follower_log_{stamp}.csv'
+        self.log_filename = os.path.join(os.path.expanduser('~'), f'blind_follower_log_{stamp}.csv')
         self.log_file = open(self.log_filename, 'w', newline='')
         self.csv_writer = csv.writer(self.log_file)
         self.csv_writer.writerow([
             'timestamp', 'state', 'wp_idx', 
             'heading_deg', 'target_heading_deg', 
-            'rel_alt', 'vfr_alt', 'fwd_pwm', 'yaw_pwm', 'duration_left',
+            'rel_alt', 'vfr_alt', 'thr_pwm', 'fwd_pwm', 'yaw_pwm', 'duration_left',
             'zed_x', 'zed_y', 'zed_yaw_deg',
             'cube_ax', 'cube_ay', 'cube_az', 'cube_gx', 'cube_gy', 'cube_gz',
             'zed_ax', 'zed_ay', 'zed_az', 'zed_gx', 'zed_gy', 'zed_gz',
+            'zed_ax_raw', 'zed_ay_raw', 'zed_az_raw', 'zed_gx_raw', 'zed_gy_raw', 'zed_gz_raw',
+            'zed_center_depth_m',
             'ekf_x', 'ekf_y', 'ekf_z', 'ekf_yaw_deg',
             'zed_fps', 'zed_diag'
         ])
@@ -142,6 +151,8 @@ class BlindPathFollowerNode(Node):
         
         self.cube_imu_sub = self.create_subscription(Imu, '/mavros/imu/data', self.on_cube_imu, sensor_qos)
         self.zed_imu_sub = self.create_subscription(Imu, '/zed/zed_node/imu/data', self.on_zed_imu, sensor_qos)
+        self.zed_imu_raw_sub = self.create_subscription(Imu, '/zed/zed_node/imu/data_raw', self.on_zed_imu_raw, sensor_qos)
+        self.zed_depth_sub = self.create_subscription(Image, '/zed/zed_node/depth/depth_registered', self.on_zed_depth, sensor_qos)
         self.diag_sub = self.create_subscription(DiagnosticArray, '/diagnostics', self.on_diagnostics, sensor_qos)
         
         self.rc_pub = self.create_publisher(OverrideRCIn, str(gp('rc_override_topic')), 10)
@@ -210,6 +221,34 @@ class BlindPathFollowerNode(Node):
         self.zed_gy = msg.angular_velocity.y
         self.zed_gz = msg.angular_velocity.z
 
+    def on_zed_imu_raw(self, msg: Imu):
+        self.zed_ax_raw = msg.linear_acceleration.x
+        self.zed_ay_raw = msg.linear_acceleration.y
+        self.zed_az_raw = msg.linear_acceleration.z
+        self.zed_gx_raw = msg.angular_velocity.x
+        self.zed_gy_raw = msg.angular_velocity.y
+        self.zed_gz_raw = msg.angular_velocity.z
+
+    def on_zed_depth(self, msg: Image):
+        if msg.encoding == '32FC1':
+            center_row = msg.height // 2
+            center_col = msg.width // 2
+            
+            window_size = 10
+            valid_depths = []
+            
+            for r in range(max(0, center_row - window_size), min(msg.height, center_row + window_size)):
+                for c in range(max(0, center_col - window_size), min(msg.width, center_col + window_size)):
+                    idx = (r * msg.step) + (c * 4)
+                    data_bytes = msg.data[idx:idx+4]
+                    if len(data_bytes) == 4:
+                        (val,) = struct.unpack('f', data_bytes)
+                        if not math.isnan(val) and not math.isinf(val) and val > 0.1:
+                            valid_depths.append(val)
+            
+            if valid_depths:
+                self.zed_center_depth = sum(valid_depths) / len(valid_depths)
+
     def on_diagnostics(self, msg: DiagnosticArray):
         errs = []
         for status in msg.status:
@@ -227,6 +266,7 @@ class BlindPathFollowerNode(Node):
         rc_msg = OverrideRCIn()
         # 0 göndermek MAVROS'ta RC override'ı pilot kumandasına (joystick) devretmek demektir!
         rc_msg.channels = [0] * 18 
+        self.thr_out = 1500
         self.fwd_out = 1500
         self.yaw_out = 1500
         self.rc_pub.publish(rc_msg)
@@ -267,12 +307,15 @@ class BlindPathFollowerNode(Node):
                 f"{math.degrees(self.heading_rad):.2f}", f"{th:.2f}",
                 f"{self.rel_alt if self.rel_alt is not None else 0.0:.2f}",
                 f"{self.vfr_alt if self.vfr_alt is not None else 0.0:.2f}",
-                self.fwd_out, self.yaw_out, f"{dur:.2f}",
+                self.thr_out, self.fwd_out, self.yaw_out, f"{dur:.2f}",
                 f"{self.zed_x:.3f}", f"{self.zed_y:.3f}", f"{math.degrees(self.zed_yaw):.2f}",
                 f"{self.cube_ax:.3f}", f"{self.cube_ay:.3f}", f"{self.cube_az:.3f}",
                 f"{self.cube_gx:.3f}", f"{self.cube_gy:.3f}", f"{self.cube_gz:.3f}",
                 f"{self.zed_ax:.3f}", f"{self.zed_ay:.3f}", f"{self.zed_az:.3f}",
                 f"{self.zed_gx:.3f}", f"{self.zed_gy:.3f}", f"{self.zed_gz:.3f}",
+                f"{self.zed_ax_raw:.3f}", f"{self.zed_ay_raw:.3f}", f"{self.zed_az_raw:.3f}",
+                f"{self.zed_gx_raw:.3f}", f"{self.zed_gy_raw:.3f}", f"{self.zed_gz_raw:.3f}",
+                f"{self.zed_center_depth:.3f}",
                 f"{self.ekf_x:.3f}", f"{self.ekf_y:.3f}", f"{self.ekf_z:.3f}", f"{math.degrees(self.ekf_yaw):.2f}",
                 f"{self.zed_fps:.1f}", self.zed_diag_msg
             ])
@@ -327,6 +370,7 @@ class BlindPathFollowerNode(Node):
             rc_msg.channels[4] = 1500  # Forward
             rc_msg.channels[5] = 1500  # Sway
             
+            self.thr_out = 1200
             self.fwd_out = 1500; self.yaw_out = 1500
             self.rc_pub.publish(rc_msg)
             
@@ -376,6 +420,7 @@ class BlindPathFollowerNode(Node):
             rc_msg.channels[4] = 1500  # Stop fwd
             rc_msg.channels[5] = 1500  # Sway (Yanal Hareket Kilitli)
             
+            self.thr_out = rc_msg.channels[2]
             self.fwd_out = 1500
             self.yaw_out = rc_msg.channels[3]
             self.rc_pub.publish(rc_msg)
@@ -405,6 +450,7 @@ class BlindPathFollowerNode(Node):
             rc_msg.channels[4] = self.fwd_pwm
             rc_msg.channels[5] = 1500  # Sway Kilitli
             
+            self.thr_out = rc_msg.channels[2]
             self.fwd_out = self.fwd_pwm
             self.yaw_out = rc_msg.channels[3]
             self.rc_pub.publish(rc_msg)
