@@ -11,6 +11,10 @@ Senaryolar:
 2: Şamandıra=(5,-5) Bitiş=(5,5)
 3: Şamandıra=(10,10) Bitiş=(0,0)
 4: Şamandıra=(5,5) Bitiş=(0,0)
+5: Şamandıra=(5,-5) Bitiş=(0,0)
+6: Şamandıra=(-5,5) Bitiş=(0,0)
+7: Şamandıra=(5,0) Bitiş=(5,5)
+8: Şamandıra=(0,5) Bitiş=(5,5)
 """
 
 import rclpy
@@ -58,8 +62,20 @@ class LocalWaypointsNode(Node):
         elif self.scenario == 4:
             buoy = (5.0, 5.0)
             end = (0.0, 0.0)
+        elif self.scenario == 5:
+            buoy = (5.0, -5.0)
+            end = (0.0, 0.0)
+        elif self.scenario == 6:
+            buoy = (-5.0, 5.0)
+            end = (0.0, 0.0)
+        elif self.scenario == 7:
+            buoy = (5.0, 0.0)
+            end = (5.0, 5.0)
+        elif self.scenario == 8:
+            buoy = (0.0, 5.0)
+            end = (5.0, 5.0)
         else:
-            self.get_logger().warn("1, 2, 3 veya 4 disinda bir senaryo girildi! Varsayilan olarak 1 secildi.")
+            self.get_logger().warn("Gecersiz bir senaryo girildi! Varsayilan olarak 1 secildi.")
             buoy = (5.0, 5.0)
             end = (5.0, -10.0)
 
