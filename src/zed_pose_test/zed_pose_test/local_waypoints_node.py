@@ -74,6 +74,11 @@ class LocalWaypointsNode(Node):
         elif self.scenario == 8:
             buoy = (0.0, 5.0)
             end = (5.0, 5.0)
+        elif self.scenario == 9:
+            # Pusula 329 dereceye denk gelen ENU acisi: 121 derece.
+            # 5 Metre mesafe = X: 5*cos(121) ~ -2.6, Y: 5*sin(121) ~ 4.3
+            buoy = (-2.6, 4.3)
+            end = (0.0, 0.0)
         else:
             self.get_logger().warn("Gecersiz bir senaryo girildi! Varsayilan olarak 1 secildi.")
             buoy = (5.0, 5.0)

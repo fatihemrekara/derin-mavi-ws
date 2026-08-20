@@ -75,10 +75,10 @@ class GpsToLocalNode(Node):
         print(' Sabit noktalar dogrudan yukleniyor...')
         print('=' * 52)
 
-        # Kullanicidan istemek yerine dogrudan belirlenen 6 enlem-boylam degeri (3 nokta)
-        start = (41.008200, 28.978400)      # BASLANGIC (Nokta A)
-        end = (41.008350, 28.978550)        # BITIS (Nokta B)
-        buoy = (41.008120, 28.978600)       # SAMANDIRA (Nokta C)
+        # Senaryo 4 Tarzı (Bitiş=Başlangıç), Hedef Pusulada 329 Derece (Kuzey-Batı), Yaklaşık 10 Metre
+        start = (41.0082000, 28.9784000)      # BASLANGIC (Nokta A)
+        end = (41.0082000, 28.9784000)        # BITIS (Nokta B) - Başlangıç ile aynı
+        buoy = (41.0082770, 28.9783387)       # SAMANDIRA (Nokta C) - 329 yönünde 10m
 
         lat0, lon0 = start
         points_deg = [('Baslangic', start), ('Bitis', end), ('Samandira', buoy)]
