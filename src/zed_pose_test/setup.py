@@ -62,6 +62,8 @@ setup(
             'manual_gps_route_node = zed_pose_test.manual_gps_route_node:main',
             'imu_alignment_node = zed_pose_test.imu_alignment_node:main',
             'advanced_blind_follower = zed_pose_test.advanced_blind_follower:main',
+            'shallow_square_blind_test = zed_pose_test.shallow_square_blind_test:main',
+            'surface_square_blind_test = zed_pose_test.surface_square_blind_test:main',
         ],
     },
 )
