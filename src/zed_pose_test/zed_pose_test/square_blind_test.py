@@ -60,14 +60,16 @@ class SquareBlindTestNode(Node):
         
         self.declare_parameter('rc_override_topic', '/mavros/rc/override')
         self.declare_parameter('control_rate_hz', 20.0)
-        self.declare_parameter('fwd_pwm', 1680)        # Ileri yon throttle'i
+        self.declare_parameter('fwd_pwm', 1700)        # Ileri yon throttle'i
         self.declare_parameter('fwd_duration_ref', 25.0)   # 5m = 25s referansi
         self.declare_parameter('k_heading_fwd', 2.0)   # Ileri surus yaw P katsayisi
+        self.declare_parameter('target_depth_m', -0.5)  # Hedef derinlik (metre, negatif = su altı)
         
         gp = lambda n: self.get_parameter(n).value
         self.fwd_pwm = int(gp('fwd_pwm'))
         self.fwd_duration_ref = float(gp('fwd_duration_ref'))
         self.k_heading_fwd = float(gp('k_heading_fwd'))
+        self.target_depth = float(gp('target_depth_m'))
         rate = float(gp('control_rate_hz'))
         
         self.heading_rad = None
@@ -384,7 +386,7 @@ class SquareBlindTestNode(Node):
             self.thr_out = 1400; self.fwd_out = 1500; self.yaw_out = yaw_pwm_calc
             self.get_logger().info(f'Dalış: 1400 PWM, rel_alt: {self.rel_alt:.2f}m, Yaw: {yaw_pwm_calc}', throttle_duration_sec=2.0)
             
-            if self.rel_alt < -1.0 or elapsed > 15.0:
+            if self.rel_alt < self.target_depth or elapsed > 15.0:
                 self.get_logger().info(f"Dalis bitti. Ilk rotasyon segmentine geçiliyor.")
                 self.curr_segment_idx = 0
                 self.rotating_settled_start = None
@@ -396,7 +398,7 @@ class SquareBlindTestNode(Node):
             yaw_err_deg = math.degrees(yaw_err)
             
             # Sadece yerimizde dönüyoruz, fwd yollamıyoruz. Sadece ALT_HOLD icin derinlik koruma acik
-            depth_err = -1.0 - (self.rel_alt if self.rel_alt is not None else 0.0)
+            depth_err = self.target_depth - (self.rel_alt if self.rel_alt is not None else 0.0)
             pwm_thr = int(1450 + 300.0 * depth_err)
             pwm_thr = max(1300, min(1900, pwm_thr))
             
@@ -445,7 +447,7 @@ class SquareBlindTestNode(Node):
                     self.change_state('ROTATING')
                 return
                 
-            depth_err = -1.0 - (self.rel_alt if self.rel_alt is not None else 0.0)
+            depth_err = self.target_depth - (self.rel_alt if self.rel_alt is not None else 0.0)
             pwm_thr = int(1450 + 300.0 * depth_err)
             pwm_thr = max(1300, min(1900, pwm_thr))
             
@@ -454,6 +456,7 @@ class SquareBlindTestNode(Node):
             yaw_err_deg = math.degrees(yaw_err)
             yaw_pwm_calc = int(1500 - (yaw_err_deg * self.k_heading_fwd))
             yaw_pwm_calc = max(1450, min(1550, yaw_pwm_calc))
+
                 
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18

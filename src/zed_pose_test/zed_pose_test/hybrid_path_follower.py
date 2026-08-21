@@ -24,10 +24,11 @@ import datetime
 import signal
 import sys
 import os
+import struct
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
 from std_msgs.msg import Float64
 from geometry_msgs.msg import PoseStamped
-from sensor_msgs.msg import Imu
+from sensor_msgs.msg import Imu, Image
 from diagnostic_msgs.msg import DiagnosticArray
 from mavros_msgs.srv import CommandBool, SetMode
 from nav_msgs.msg import Path
@@ -87,10 +88,11 @@ class HybridPathFollowerNode(Node):
         self.declare_parameter('w_max', 1.0)              # Maks yaw rate (normalize)
         self.declare_parameter('segment_tolerance_m', 0.5) # Segment bitiş mesafe toleransı
         self.declare_parameter('zed_timeout_sec', 3.0)     # ZED verisi kesilirse fallback'e geçiş süresi
-        self.declare_parameter('target_depth_m', -1.0)     # Fallback Hedef derinlik
+        self.declare_parameter('target_depth_m', -0.5)     # Fallback Hedef derinlik
         self.declare_parameter('min_ground_distance', 1.0) # Yere olan minimum hedef mesafe (metre)
         self.declare_parameter('max_ground_distance', 1.5) # Yere olan maksimum hedef mesafe (metre)
         self.declare_parameter('dive_pwm', 1200)           # Dalış itkisi
+        self.declare_parameter('zed_depth_control', False)    # ZED derinlik sensörüyle terrain following aç/kapa
         self.declare_parameter('log_dir', '')               # Boşsa mevcut dizin
 
         gp = lambda n: self.get_parameter(n).value
@@ -106,6 +108,7 @@ class HybridPathFollowerNode(Node):
         self.min_ground_distance = float(gp('min_ground_distance'))
         self.max_ground_distance = float(gp('max_ground_distance'))
         self.dive_pwm = int(gp('dive_pwm'))
+        self.zed_depth_control = bool(gp('zed_depth_control'))
         rate = float(gp('control_rate_hz'))
 
         # ── Rota Durumu ──
@@ -200,6 +203,8 @@ class HybridPathFollowerNode(Node):
         self.ekf_sub = self.create_subscription(PoseStamped, '/mavros/local_position/pose', self.on_ekf_pose, sensor_qos)
         self.cube_imu_sub = self.create_subscription(Imu, '/mavros/imu/data', self.on_cube_imu, sensor_qos)
         self.zed_imu_sub = self.create_subscription(Imu, '/zed/zed_node/imu/data', self.on_zed_imu, sensor_qos)
+        if self.zed_depth_control:
+            self.depth_sub = self.create_subscription(Image, '/zed/zed_node/depth/depth_registered', self.on_zed_depth, sensor_qos)
         self.diag_sub = self.create_subscription(DiagnosticArray, '/diagnostics', self.on_diagnostics, sensor_qos)
 
         # ── Yayıncılar & Servisler ──
@@ -217,6 +222,7 @@ class HybridPathFollowerNode(Node):
         self.get_logger().info(f"  Derinlik        : Orange Cube (rel_alt + ALT_HOLD)")
         self.get_logger().info(f"  İleri PWM       : {self.fwd_pwm}")
         self.get_logger().info(f"  Hedef Derinlik  : {self.target_depth} m")
+        self.get_logger().info(f"  ZED Depth Ctrl  : {'AKTİF' if self.zed_depth_control else 'KAPALI'}")
         self.get_logger().info(f"  ZED Timeout     : {self.zed_timeout} s")
         self.get_logger().info(f"  Kayıt Dosyası   : {self.log_filename}")
         self.get_logger().info("=" * 60)
@@ -287,6 +293,28 @@ class HybridPathFollowerNode(Node):
         self.zed_gx = msg.angular_velocity.x
         self.zed_gy = msg.angular_velocity.y
         self.zed_gz = msg.angular_velocity.z
+
+    def on_zed_depth(self, msg: Image):
+        """ZED derinlik görüntüsü — merkez bölgesinin ortalamasını alır."""
+        if msg.encoding == '32FC1':
+            center_row = msg.height // 2
+            center_col = msg.width // 2
+            window_size = 10
+            valid_depths = []
+
+            for r in range(max(0, center_row - window_size), min(msg.height, center_row + window_size)):
+                for c in range(max(0, center_col - window_size), min(msg.width, center_col + window_size)):
+                    idx = (r * msg.step) + (c * 4)
+                    data_bytes = msg.data[idx:idx+4]
+                    if len(data_bytes) == 4:
+                        (val,) = struct.unpack('f', data_bytes)
+                        if not math.isnan(val) and not math.isinf(val) and val > 0.1:
+                            valid_depths.append(val)
+
+            if valid_depths:
+                self.zed_center_depth = sum(valid_depths) / len(valid_depths)
+            else:
+                self.zed_center_depth = None
 
     def on_diagnostics(self, msg: DiagnosticArray):
         errs = []
