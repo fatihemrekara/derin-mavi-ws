@@ -158,8 +158,13 @@ class ZedToMavrosBridge(Node):
         out_msg.header.stamp = msg.header.stamp
         out_msg.header.frame_id = 'odom'
 
-        # Pozisyon
-        out_msg.pose.pose.position = msg.pose.pose.position
+        # ━━━ EKSEN DÖNÜŞÜMÜ (AXIS REMAPPING) ━━━
+        # Kamera 90 derece aşağı bakıyor. 
+        # ZED'in kendi X'i aşağı, Z'si ileri gösteriyor. 
+        # MAVROS ENU (X: İleri, Y: Sol, Z: Yukarı) bekliyor.
+        out_msg.pose.pose.position.x = msg.pose.pose.position.z   # ZED Z -> MAVROS X (İleri)
+        out_msg.pose.pose.position.y = msg.pose.pose.position.y   # ZED Y -> MAVROS Y (Sol)
+        out_msg.pose.pose.position.z = -msg.pose.pose.position.x  # ZED X (Aşağı) -> MAVROS Z (Yukarı = -Aşağı)
 
         # Orientation sabitlenmesi (sadece XYZ pozisyon kullanılıyor)
         # Yaw/Pitch/Roll tamamen Orange Cube IMU'dan çözülüyor
@@ -168,21 +173,35 @@ class ZedToMavrosBridge(Node):
         out_msg.pose.pose.orientation.z = 0.0
         out_msg.pose.pose.orientation.w = 1.0
 
-        # ━━━ KATMAN 3: Covariance Inflation (Güven düşükse şişir) ━━━
-        cov = list(msg.pose.covariance)
+        # ━━━ KOVARYANS MATRİSİ DÖNÜŞÜMÜ ━━━
+        # Eksenler değiştiği için varyansların da matriste yer değiştirmesi şarttır
+        old_cov = list(msg.pose.covariance)
+        new_cov = [0.0] * 36
+        
+        # Mappings: MAVROS[0(X)] = ZED[2(Z)], MAVROS[1(Y)] = ZED[1(Y)], MAVROS[2(Z)] = ZED[0(X)]
+        # Roll ve Yaw eksenleri de aynı mantıkla yer değiştirir
+        mapping = [2, 1, 0, 5, 4, 3] 
+        signs = [1.0, 1.0, -1.0, 1.0, 1.0, -1.0]
+        
+        for i in range(6):
+            for j in range(6):
+                orig_i = mapping[i]
+                orig_j = mapping[j]
+                new_cov[i*6 + j] = old_cov[orig_i*6 + orig_j] * signs[i] * signs[j]
 
+        # ━━━ KATMAN 3: Covariance Inflation (Güven düşükse şişir) ━━━
         if self.zed_confidence < self.low_conf:
             # Düşük güvende covariance'ın köşegen elemanlarını şişir
             # EKF3 bunu görür ve "bu ölçüme az güveneyim, IMU'ya yaslanayım" der
             factor = self.cov_inflation
             # 6x6 covariance matrisinin köşegen indeksleri: 0, 7, 14, 21, 28, 35
             for diag_idx in [0, 7, 14, 21, 28, 35]:
-                cov[diag_idx] = max(cov[diag_idx] * factor, factor * 0.01)
+                new_cov[diag_idx] = max(new_cov[diag_idx] * factor, factor * 0.01)
             self.inflated_frames += 1
         else:
             self.passed_frames += 1
 
-        out_msg.pose.covariance = cov
+        out_msg.pose.covariance = new_cov
 
         self.pub.publish(out_msg)
 

@@ -1,0 +1,61 @@
+ekf_filter_node:
+    ros__parameters:
+        frequency: 30.0
+        sensor_timeout: 0.1
+        two_d_mode: false
+        transform_time_offset: 0.0
+        transform_timeout: 0.0
+        print_diagnostics: true
+        debug: false
+        publish_tf: true
+        
+        map_frame: map
+        odom_frame: odom
+        base_link_frame: base_link
+        world_frame: odom
+
+        # 1. Orange Cube IMU (Hem ivme hem açısal hız hem de oryantasyon sağlar)
+        # Zaten pixhawk üzerinde kalibre edildiği için oldukça güvenilirdir.
+        imu0: /mavros/imu/data
+        imu0_config: [false, false, false, # Position X,Y,Z
+                      true,  true,  true,  # Orientation Roll, Pitch, Yaw
+                      false, false, false, # Velocity X,Y,Z
+                      true,  true,  true,  # Angular Velocity R,P,Y
+                      true,  true,  true]  # Linear Acceleration X,Y,Z
+        imu0_nodelay: false
+        imu0_differential: false
+        imu0_relative: false
+        imu0_queue_size: 10
+        
+        # 2. ZED Aligned IMU (Yalnızca ivme ve jiroskop)
+        # imu_alignment_node tarafından x,y,z'si tamamen ENU standardına oturtuldu.
+        # Bu girdi eklenerek titreşimlerin ortadan kaldırılması sağlanır.
+        imu1: /zed/aligned_imu
+        imu1_config: [false, false, false,
+                      false, false, false,
+                      false, false, false,
+                      true,  true,  true,  
+                      true,  true,  true]
+        imu1_nodelay: false
+        imu1_differential: false
+        imu1_relative: false
+        imu1_queue_size: 10
+
+        use_control_input: false
+
+        # Yüksek frekanslarda stabilizasyon için Process Noise ayarları
+        process_noise_covariance: [0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.06, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.06, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.025, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.025, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.04, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.02, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.015]
