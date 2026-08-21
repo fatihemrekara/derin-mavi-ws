@@ -42,9 +42,11 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
 
+import struct
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, Twist, Point
 from visualization_msgs.msg import Marker, MarkerArray
+from sensor_msgs.msg import Image
 
 
 def quat_to_yaw(ox, oy, oz, ow):
@@ -81,6 +83,9 @@ class PathFollowerNode(Node):
         self.declare_parameter('k_heading', 1.8)
         self.declare_parameter('pose_timeout', 0.6)
         self.declare_parameter('initial_yaw_offset_deg', 0.0)
+        self.declare_parameter('min_ground_distance', 1.0)
+        self.declare_parameter('max_ground_distance', 1.5)
+        self.declare_parameter('z_velocity', 0.2)
 
         gp = lambda n: self.get_parameter(n).value
         self.lookahead = float(gp('lookahead'))
@@ -95,6 +100,11 @@ class PathFollowerNode(Node):
         self.pose_timeout = float(gp('pose_timeout'))
         self.yaw_offset = math.radians(float(gp('initial_yaw_offset_deg')))
         rate = float(gp('control_rate_hz'))
+
+        self.min_ground_distance = float(gp('min_ground_distance'))
+        self.max_ground_distance = float(gp('max_ground_distance'))
+        self.z_velocity = float(gp('z_velocity'))
+        self.zed_center_depth = None
 
         self.path_pts = []
         self.cum = []
@@ -120,6 +130,8 @@ class PathFollowerNode(Node):
             Path, str(gp('path_topic')), self.on_path, latched)
         self.pose_sub = self.create_subscription(
             PoseStamped, str(gp('pose_topic')), self.on_pose, 10)
+        self.depth_sub = self.create_subscription(
+            Image, '/zed/zed_node/depth/depth_registered', self.on_zed_depth, 10)
 
         self.cmd_pub = self.create_publisher(Twist, str(gp('cmd_vel_topic')), 10)
         self.marker_pub = self.create_publisher(MarkerArray, 'follower_markers', 10)
@@ -165,6 +177,25 @@ class PathFollowerNode(Node):
             x, y = p.x, p.y
         self.pose = (x, y, yaw)
         self.last_pose_time = self.get_clock().now()
+
+    def on_zed_depth(self, msg: Image):
+        if msg.encoding == '32FC1':
+            center_row = msg.height // 2
+            center_col = msg.width // 2
+            window_size = 10
+            valid_depths = []
+            
+            for r in range(max(0, center_row - window_size), min(msg.height, center_row + window_size)):
+                for c in range(max(0, center_col - window_size), min(msg.width, center_col + window_size)):
+                    idx = (r * msg.step) + (c * 4)
+                    data_bytes = msg.data[idx:idx+4]
+                    if len(data_bytes) == 4:
+                        (val,) = struct.unpack('f', data_bytes)
+                        if not math.isnan(val) and not math.isinf(val) and val > 0.1:
+                            valid_depths.append(val)
+            
+            if valid_depths:
+                self.zed_center_depth = sum(valid_depths) / len(valid_depths)
 
     # ================= kontrol dongusu =================
 
@@ -226,6 +257,15 @@ class PathFollowerNode(Node):
                 cmd = Twist()
                 cmd.linear.x = 0.0
                 cmd.angular.z = max(-self.w_max, min(self.w_max, self.k_heading * heading_err))
+                # Z-ekseni Zemin Takibi (Terrain Following)
+                if self.zed_center_depth is not None:
+                    if self.zed_center_depth > self.max_ground_distance:
+                        cmd.linear.z = -abs(self.z_velocity) # Asagi in
+                    elif self.zed_center_depth < self.min_ground_distance:
+                        cmd.linear.z = abs(self.z_velocity)  # Yukari cik
+                    else:
+                        cmd.linear.z = 0.0
+                        
                 self.cmd_pub.publish(cmd)
                 self.publish_markers(target)
                 self.get_logger().info(
@@ -237,6 +277,16 @@ class PathFollowerNode(Node):
                 self.startup_aligned = True
 
         cmd = Twist()
+        
+        # Z-ekseni Zemin Takibi (Terrain Following)
+        if self.zed_center_depth is not None:
+            if self.zed_center_depth > self.max_ground_distance:
+                cmd.linear.z = -abs(self.z_velocity) # Asagi in
+            elif self.zed_center_depth < self.min_ground_distance:
+                cmd.linear.z = abs(self.z_velocity)  # Yukari cik
+            else:
+                cmd.linear.z = 0.0
+
         if abs(heading_err) > self.rotate_thresh:
             cmd.linear.x = 0.0
             cmd.angular.z = max(-self.w_max,

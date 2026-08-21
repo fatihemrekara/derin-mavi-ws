@@ -21,8 +21,8 @@ def tangent_points(p, c, r):
     dx, dy = p[0] - c[0], p[1] - c[1]
     d = math.hypot(dx, dy)
     if d <= r:
-        raise ValueError(
-            f'Nokta ({p[0]:.2f}, {p[1]:.2f}) cemberin icinde (uzaklik {d:.2f} <= {r:.2f}).')
+        # Hata fırlatmak yerine teget noktasi bulabilmek adina r'yi biraz kucult
+        r = max(0.01, d * 0.99)
     base = math.atan2(dy, dx)
     alpha = math.acos(r / d)
     t1 = (c[0] + r * math.cos(base + alpha), c[1] + r * math.sin(base + alpha))
@@ -201,6 +201,21 @@ class SquareRoutePlannerNode(Node):
         r = self.radius
         log = self.get_logger()
 
+        d_start = math.hypot(start[0] - buoy[0], start[1] - buoy[1])
+        d_end = math.hypot(end[0] - buoy[0], end[1] - buoy[1])
+        
+        min_d = min(d_start, d_end)
+        safe_r = min_d * 0.6  # Karenin koseleri bile noktalara degmesin diye genel %60 kuralimiz
+        
+        if safe_r < r:
+            log.info(f'Baslangic/Bitis kesisimini onlemek amaciyla radyus dinamik olarak {r:.2f}m yerine {safe_r:.2f}m olarak ayarlandi.')
+            r = safe_r
+
+        # Orijinal radyus(bizim parametremiz) altinda eger riskli bir ic bolge girisi varsa kural yine de tam (360) kareye zorlasin
+        is_inner_case = (min_d <= self.radius)
+        if is_inner_case:
+            log.info(f'Riskli ic bolge operasyonu! (min_d={min_d:.2f}m <= {self.radius:.2f}m) Tam 360 tur zorunludur.')
+
         # Orijinal route_planner teget secimi
         t_in = pick_tangent(start, buoy, r, end, log, 'Giris tegeti')
         t_out = pick_tangent(end, buoy, r, start, log, 'Cikis tegeti')
@@ -237,7 +252,10 @@ class SquareRoutePlannerNode(Node):
                 
         quadrants = math.ceil(abs(raw_sweep) / (math.pi / 2.0))
         
-        if is_straight:
+        if is_inner_case:
+            quadrants = 4
+            log.info(">>> Nokta cember icinde oldugu icin, aracin samandira etrafinda 1 metrelik TAM KARE (360 derece) rotasi cizmesi saglanacak. <<<")
+        elif is_straight:
             quadrants = 4
             log.info(">>> Dogrusal (Collinear) gecis rotasi tespit edildi. Kural geregi aracin samandira etrafinda TAM KARE alan (360 derece) tam tur cizmesi saglanacak. <<<")
         elif quadrants == 0:

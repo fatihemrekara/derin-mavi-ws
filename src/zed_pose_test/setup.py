@@ -29,6 +29,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'mock_auv = zed_pose_test.mock_auv:main',
             'gps_to_local_node = zed_pose_test.gps_to_local_node:main',
             'local_waypoints_node = zed_pose_test.local_waypoints_node:main',
             'route_planner = zed_pose_test.route_planner_node:main',
@@ -64,6 +65,7 @@ setup(
             'advanced_blind_follower = zed_pose_test.advanced_blind_follower:main',
             'shallow_square_blind_test = zed_pose_test.shallow_square_blind_test:main',
             'surface_square_blind_test = zed_pose_test.surface_square_blind_test:main',
+            'dms_converter_node = zed_pose_test.dms_converter_node:main',
         ],
     },
 )

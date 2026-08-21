@@ -87,7 +87,9 @@ class HybridPathFollowerNode(Node):
         self.declare_parameter('w_max', 1.0)              # Maks yaw rate (normalize)
         self.declare_parameter('segment_tolerance_m', 0.5) # Segment bitiş mesafe toleransı
         self.declare_parameter('zed_timeout_sec', 3.0)     # ZED verisi kesilirse fallback'e geçiş süresi
-        self.declare_parameter('target_depth_m', -1.0)     # Hedef derinlik
+        self.declare_parameter('target_depth_m', -1.0)     # Fallback Hedef derinlik
+        self.declare_parameter('min_ground_distance', 1.0) # Yere olan minimum hedef mesafe (metre)
+        self.declare_parameter('max_ground_distance', 1.5) # Yere olan maksimum hedef mesafe (metre)
         self.declare_parameter('dive_pwm', 1200)           # Dalış itkisi
         self.declare_parameter('log_dir', '')               # Boşsa mevcut dizin
 
@@ -101,6 +103,8 @@ class HybridPathFollowerNode(Node):
         self.segment_tol = float(gp('segment_tolerance_m'))
         self.zed_timeout = float(gp('zed_timeout_sec'))
         self.target_depth = float(gp('target_depth_m'))
+        self.min_ground_distance = float(gp('min_ground_distance'))
+        self.max_ground_distance = float(gp('max_ground_distance'))
         self.dive_pwm = int(gp('dive_pwm'))
         rate = float(gp('control_rate_hz'))
 
@@ -123,6 +127,7 @@ class HybridPathFollowerNode(Node):
         self.zed_y = 0.0
         self.zed_yaw = 0.0
         self.last_zed_time = None     # Son ZED mesaj zamanı
+        self.zed_center_depth = None  # Görüntüden alınan zemin mesafesi
 
         # Segment başlangıcı (ZED koordinatları)
         self.seg_start_zed_x = 0.0
@@ -410,14 +415,23 @@ class HybridPathFollowerNode(Node):
         self.rc_pub.publish(rc)
 
         elapsed = (now - self.dive_start_time).nanoseconds * 1e-9
-        self.get_logger().info(
-            f'Dalış: {self.dive_pwm} PWM, rel_alt: {self.rel_alt:.2f}m, süre: {elapsed:.1f}s',
-            throttle_duration_sec=2.0)
+        info_str = f'Dalış: {self.dive_pwm} PWM, rel_alt: {self.rel_alt:.2f}m'
+        if self.zed_center_depth is not None:
+            info_str += f', Zemin: {self.zed_center_depth:.2f}m'
+        self.get_logger().info(f'{info_str}, süre: {elapsed:.1f}s', throttle_duration_sec=2.0)
 
-        if elapsed > 30.0 or self.rel_alt < self.target_depth:
+        # ZED derinlik sensörü ile zemine maksimum yaklaşıma varıldığında dalışı bitir
+        if self.zed_center_depth is not None and self.zed_center_depth <= self.max_ground_distance:
             self.state = 'ROTATING'
             self.get_logger().info(
-                f'Hedef derinliğe ulaşıldı (rel_alt: {self.rel_alt:.2f}m). Rota takibine geçiliyor.')
+                f'Yere yaklaşıldı! Zemin uzaklığı: {self.zed_center_depth:.2f}m. '
+                f'Rota takibine geçiliyor.')
+                
+        # Fallback güvenlik sınırı veya zaman aşımı
+        elif elapsed > 30.0 or (self.rel_alt is not None and self.rel_alt < self.target_depth):
+            self.state = 'ROTATING'
+            self.get_logger().info(
+                f'Fallback derinliğine (veya süresine) ulaşıldı (rel_alt: {self.rel_alt:.2f}m). Rota takibine geçiliyor.')
 
     def _do_rotating(self, now, heading_err, target_heading, seg_length):
         """Pusula heading ile hedef açıya dönüş. Tolerans içindeyse FORWARD'a geç."""
@@ -440,9 +454,17 @@ class HybridPathFollowerNode(Node):
         w = max(-self.w_max, min(self.w_max, self.k_heading * heading_err))
         pwm_yaw = int(1500 - (w / self.w_max) * 200) if self.w_max > 0 else 1500
 
-        # Derinlik kontrolü
-        depth_err = self.target_depth - (self.rel_alt if self.rel_alt is not None else 0.0)
-        pwm_thr = int(1450 + 300.0 * depth_err)
+        # Derinlik kontrolü (ZED tabanlı sürekli terrain following)
+        if self.zed_center_depth is not None:
+            if self.zed_center_depth > self.max_ground_distance:
+                pwm_thr = 1450  # Aşağı yaklaş
+            elif self.zed_center_depth < self.min_ground_distance:
+                pwm_thr = 1550  # Biraz daha havalan
+            else:
+                pwm_thr = 1500  # Aralığa oturduğunda yüksekliği koru
+        else:
+            depth_err = self.target_depth - (self.rel_alt if self.rel_alt is not None else 0.0)
+            pwm_thr = int(1450 + 300.0 * depth_err)
 
         rc = OverrideRCIn()
         rc.channels = [65535] * 18
@@ -506,9 +528,17 @@ class HybridPathFollowerNode(Node):
         pwm_yaw = int(1500 - (w / self.w_max) * 100) if self.w_max > 0 else 1500
         # Heading düzeltme daha yumuşak: max ±100 PWM (dönüşte ±200)
 
-        # ── Derinlik kontrolü ──
-        depth_err = self.target_depth - (self.rel_alt if self.rel_alt is not None else 0.0)
-        pwm_thr = int(1450 + 300.0 * depth_err)
+        # ── Derinlik kontrolü (ZED tabanlı sürekli terrain following) ──
+        if self.zed_center_depth is not None:
+            if self.zed_center_depth > self.max_ground_distance:
+                pwm_thr = 1450  # Aşağı yaklaş
+            elif self.zed_center_depth < self.min_ground_distance:
+                pwm_thr = 1550  # Biraz daha havalan
+            else:
+                pwm_thr = 1500  # Aralığa oturduğunda yüksekliği koru
+        else:
+            depth_err = self.target_depth - (self.rel_alt if self.rel_alt is not None else 0.0)
+            pwm_thr = int(1450 + 300.0 * depth_err)
 
         rc = OverrideRCIn()
         rc.channels = [65535] * 18
