@@ -86,6 +86,8 @@ class PathFollowerNode(Node):
         self.declare_parameter('min_ground_distance', 1.0)
         self.declare_parameter('max_ground_distance', 1.5)
         self.declare_parameter('z_velocity', 0.2)
+        self.declare_parameter('blind_dive_enabled', False)
+        self.declare_parameter('blind_dive_speed', 0.15)
 
         gp = lambda n: self.get_parameter(n).value
         self.lookahead = float(gp('lookahead'))
@@ -104,6 +106,8 @@ class PathFollowerNode(Node):
         self.min_ground_distance = float(gp('min_ground_distance'))
         self.max_ground_distance = float(gp('max_ground_distance'))
         self.z_velocity = float(gp('z_velocity'))
+        self.blind_dive_enabled = bool(gp('blind_dive_enabled'))
+        self.blind_dive_speed = float(gp('blind_dive_speed'))
         self.zed_center_depth = None
 
         self.path_pts = []
@@ -130,8 +134,13 @@ class PathFollowerNode(Node):
             Path, str(gp('path_topic')), self.on_path, latched)
         self.pose_sub = self.create_subscription(
             PoseStamped, str(gp('pose_topic')), self.on_pose, 10)
+        sensor_qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1
+        )
         self.depth_sub = self.create_subscription(
-            Image, '/zed/zed_node/depth/depth_registered', self.on_zed_depth, 10)
+            Image, '/zed/zed_node/depth/depth_registered', self.on_zed_depth, sensor_qos)
 
         self.cmd_pub = self.create_publisher(Twist, str(gp('cmd_vel_topic')), 10)
         self.marker_pub = self.create_publisher(MarkerArray, 'follower_markers', 10)
@@ -196,6 +205,8 @@ class PathFollowerNode(Node):
             
             if valid_depths:
                 self.zed_center_depth = sum(valid_depths) / len(valid_depths)
+            else:
+                self.zed_center_depth = None # Eger hic gecerli derinlik yoksa (zemin gorulmuyorsa) eski dege takili kalmamasi icin None yap
 
     # ================= kontrol dongusu =================
 
@@ -265,6 +276,11 @@ class PathFollowerNode(Node):
                         cmd.linear.z = abs(self.z_velocity)  # Yukari cik
                     else:
                         cmd.linear.z = 0.0
+                else:
+                    if self.blind_dive_enabled:
+                        cmd.linear.z = -abs(self.blind_dive_speed)  # Körü körüne dal
+                    else:
+                        cmd.linear.z = 0.0  # Zemin görülmüyor, bekle
                         
                 self.cmd_pub.publish(cmd)
                 self.publish_markers(target)
@@ -286,6 +302,11 @@ class PathFollowerNode(Node):
                 cmd.linear.z = abs(self.z_velocity)  # Yukari cik
             else:
                 cmd.linear.z = 0.0
+        else:
+            if self.blind_dive_enabled:
+                cmd.linear.z = -abs(self.blind_dive_speed)  # Körü körüne dal
+            else:
+                cmd.linear.z = 0.0  # Zemin görülmüyor, bekle
 
         if abs(heading_err) > self.rotate_thresh:
             cmd.linear.x = 0.0
