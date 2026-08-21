@@ -402,9 +402,13 @@ class SquareBlindTestNode(Node):
             pwm_thr = int(1450 + 300.0 * depth_err)
             pwm_thr = max(1300, min(1900, pwm_thr))
             
-            # Donus icin limitli Yaw Controller
-            yaw_pwm_calc = int(1500 - (yaw_err_deg * self.k_heading_fwd))
-            yaw_pwm_calc = max(1350, min(1650, yaw_pwm_calc))
+            # Donus icin Bang-Bang Yaw Controller (sabit hiz)
+            if abs(yaw_err_deg) < 8.0:
+                yaw_pwm_calc = 1500
+            elif yaw_err_deg > 0:
+                yaw_pwm_calc = 1400
+            else:
+                yaw_pwm_calc = 1600
             
             if abs(yaw_err_deg) < 8.0:
                 if self.rotating_settled_start is None:
@@ -451,11 +455,16 @@ class SquareBlindTestNode(Node):
             pwm_thr = int(1450 + 300.0 * depth_err)
             pwm_thr = max(1300, min(1900, pwm_thr))
             
-            # Yaw PID (SADECE FORWARD'DA, YAW MAX +- 50 duzeltme icin)
+            # Yaw Bang-Bang (SADECE FORWARD'DA, YAW duzeltme)
             yaw_err = normalize_angle(target_hdg - self.heading_rad)
             yaw_err_deg = math.degrees(yaw_err)
-            yaw_pwm_calc = int(1500 - (yaw_err_deg * self.k_heading_fwd))
-            yaw_pwm_calc = max(1450, min(1550, yaw_pwm_calc))
+            
+            if abs(yaw_err_deg) < 8.0:
+                yaw_pwm_calc = 1500
+            elif yaw_err_deg > 0:
+                yaw_pwm_calc = 1400
+            else:
+                yaw_pwm_calc = 1600
 
                 
             rc_msg = OverrideRCIn()
