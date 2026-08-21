@@ -34,7 +34,7 @@ class StraightBlindTestNode(Node):
         
         self.declare_parameter('rc_override_topic', '/mavros/rc/override')
         self.declare_parameter('control_rate_hz', 20.0)
-        self.declare_parameter('fwd_pwm', 1680)        # Ileri yon throttle'i
+        self.declare_parameter('fwd_pwm', 1700)        # Ileri yon throttle'i
         self.declare_parameter('fwd_duration', 25.0)   # Kac saniye duz gidecek
         self.declare_parameter('k_heading_fwd', 2.0)   # Ileri surus yaw P katsayisi
         
@@ -322,12 +322,16 @@ class StraightBlindTestNode(Node):
             return
 
         if self.state == 'DIVING':
-            # Dalışta aracı sabit tutmak için çok hafif ve kısıtlı Yaw müdahalesi (1470-1530)
+            # Dalışta aracı sabit tutmak için çok hafif ve kısıtlı Yaw müdahalesi (Sabit 1400/1600)
             yaw_pwm_calc = 1500
             if self.ref_heading_rad is not None and self.heading_rad is not None:
                 yaw_err = normalize_angle(self.ref_heading_rad - self.heading_rad)
-                yaw_pwm_calc = int(1500 + (math.degrees(yaw_err) * self.k_heading_fwd))
-                yaw_pwm_calc = max(1470, min(1530, yaw_pwm_calc))
+                yaw_err_deg = math.degrees(yaw_err)
+                if abs(yaw_err_deg) > 5.0:
+                    if yaw_err_deg > 0:
+                        yaw_pwm_calc = 1600
+                    else:
+                        yaw_pwm_calc = 1400
 
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
@@ -357,14 +361,19 @@ class StraightBlindTestNode(Node):
             pwm_thr = int(1450 + 300.0 * depth_err)
             pwm_thr = max(1300, min(1900, pwm_thr)) # Daha güçlü surface limiti eklendi (Pitch down baskısına karsi)
             
-            # Yaw PID (SADECE FORWARD'DA, YAW MAX +- 50)
+            # Sabit PWM ile Yaw Düzeltmesi (Bang-Bang kontrolü)
             yaw_pwm_calc = 1500
             yaw_err_deg = 0.0
             if self.ref_heading_rad is not None:
                 yaw_err = normalize_angle(self.ref_heading_rad - self.heading_rad)
                 yaw_err_deg = math.degrees(yaw_err)
-                yaw_pwm_calc = int(1500 + (yaw_err_deg * self.k_heading_fwd))
-                yaw_pwm_calc = max(1450, min(1550, yaw_pwm_calc))
+                
+                # Tolerans dışı ise sabit PWM ver 1600/1400
+                if abs(yaw_err_deg) > 5.0:
+                    if yaw_err_deg > 0:
+                        yaw_pwm_calc = 1600
+                    else:
+                        yaw_pwm_calc = 1400
                 
             rc_msg = OverrideRCIn()
             rc_msg.channels = [65535] * 18
