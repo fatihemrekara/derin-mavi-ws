@@ -43,7 +43,9 @@ class CompassTurnSequence(Node):
         # Test parametreleri
         self.target_depth = -0.5
         self.fwd_pwm = 1700
-        self.fwd_time_2m = 6.0  # 3 saniyede 1 metre gidiyor -> 6 saniyede 2 metre
+        self.fwd1_time_2m = 6.0  # İlk gidiş 6 saniye
+        self.fwd2_time_2m = 7.0  # Dönüşten sonraki gidiş 7 saniye (akıntı/ivme kaybı telafisi)
+        self.fwd3_time_2m = 6.0  # Sola dönüşten sonraki son gidiş 6 saniye
         self.yaw_kp = 2.0
         self.turn_tolerance = 3.0 # derece
         
@@ -137,9 +139,9 @@ class CompassTurnSequence(Node):
             self.rc_pub.publish(rc)
             
             if int(elapsed*10) % 10 == 0:
-                self.get_logger().info(f"[FWD_1] Ileri gidiliyor... Kalan Sure: {self.fwd_time_2m - elapsed:.1f} s")
+                self.get_logger().info(f"[FWD_1] Ileri gidiliyor... Kalan Sure: {self.fwd1_time_2m - elapsed:.1f} s")
                 
-            if elapsed > self.fwd_time_2m:
+            if elapsed > self.fwd1_time_2m:
                 self.change_state('TURN_RIGHT')
                 
         elif self.state == 'TURN_RIGHT':
@@ -182,9 +184,9 @@ class CompassTurnSequence(Node):
             self.rc_pub.publish(rc)
             
             if int(elapsed*10) % 10 == 0:
-                self.get_logger().info(f"[FWD_2] Ileri gidiliyor... Kalan Sure: {self.fwd_time_2m - elapsed:.1f} s")
+                self.get_logger().info(f"[FWD_2] Ileri gidiliyor... Kalan Sure: {self.fwd2_time_2m - elapsed:.1f} s")
                 
-            if elapsed > self.fwd_time_2m:
+            if elapsed > self.fwd2_time_2m:
                 self.change_state('TURN_LEFT')
                 
         elif self.state == 'TURN_LEFT':
@@ -202,7 +204,7 @@ class CompassTurnSequence(Node):
                 if self.settled_start_time is None:
                     self.settled_start_time = elapsed
                 elif (elapsed - self.settled_start_time) > 1.5:
-                    self.change_state('STOPPING')
+                    self.change_state('FWD_3')
                     return
             else:
                 self.settled_start_time = None
@@ -219,21 +221,37 @@ class CompassTurnSequence(Node):
             if int(elapsed*10) % 10 == 0:
                 self.get_logger().info(f"[TURN_LEFT] Hedef Hdg: {self.target_hdg:.1f}, Fark: {yaw_err:.1f}, PWM: {yaw_pwm}")
 
-        elif self.state == 'STOPPING':
+        elif self.state == 'FWD_3':
+            rc = OverrideRCIn()
+            rc.channels = [65535] * 18
+            rc.channels[2] = 1500
+            rc.channels[3] = 1500
+            rc.channels[4] = self.fwd_pwm
+            self.rc_pub.publish(rc)
+            
+            if int(elapsed*10) % 10 == 0:
+                self.get_logger().info(f"[FWD_3] Ileri gidiliyor... Kalan Sure: {self.fwd3_time_2m - elapsed:.1f} s")
+                
+            if elapsed > self.fwd3_time_2m:
+                self.change_state('HOLD_DEPTH')
+
+        elif self.state == 'HOLD_DEPTH':
             if elapsed < 0.2:
-                if self.arm_client.wait_for_service(timeout_sec=0.1):
-                    req = CommandBool.Request()
-                    req.value = False  # DISARM
-                    self.arm_client.call_async(req)
+                # Modumuzu surekli ALT_HOLD olarak temin et
+                if self.mode_client.wait_for_service(timeout_sec=0.1):
+                    req = SetMode.Request()
+                    req.custom_mode = 'ALT_HOLD'
+                    self.mode_client.call_async(req)
                 
             rc = OverrideRCIn()
             rc.channels = [65535] * 18
+            rc.channels[2] = 1500 # Throttle ortada (Derinlik koruma)
+            rc.channels[3] = 1500
+            rc.channels[4] = 1500
             self.rc_pub.publish(rc)
             
-            if elapsed > 2.0:
-                self.get_logger().info("Gorev tamamlandi, script duruyor.")
-                import sys
-                sys.exit(0)
+            if int(elapsed*10) % 10 == 0:
+                self.get_logger().info("[HOLD_DEPTH] Gorev tamamlandi, ALT HOLD modunda konum korunarak bekleniyor...")
 
 def main(args=None):
     rclpy.init(args=args)
