@@ -138,13 +138,29 @@ class TangentRoutePlannerNode(Node):
         # Teget dogrularinin kesisimi (origin->t_start ve origin->t_end teget dogrulari)
         intersect = line_intersection(start, t_start, end, t_end)
         
-        if intersect is None:
-            log.warn('Teget cizgileri paralel, kesisim bulunamadi. Samandiranin arkasinda ortalama bir u-donus noktasi belirleniyor.')
-            # Alternatif kesisim noktasi: samandiranin arkasinda 'r' kadar uzaklikta
-            mid_angle = math.atan2(end[1]-start[1], end[0]-start[0])
-            # Baslangictan bitise dogru yonelimin samandiradaki dikey ekseni
-            intersect = (buoy[0] + r * math.cos(mid_angle + math.pi/2), 
-                         buoy[1] + r * math.sin(mid_angle + math.pi/2))
+        valid_intersection = False
+        if intersect is not None:
+            dx1, dy1 = t_start[0] - start[0], t_start[1] - start[1]
+            ix1, iy1 = intersect[0] - start[0], intersect[1] - start[1]
+            dx2, dy2 = t_end[0] - end[0], t_end[1] - end[1]
+            ix2, iy2 = intersect[0] - end[0], intersect[1] - end[1]
+            if (dx1 * ix1 + dy1 * iy1 > 0) and (dx2 * ix2 + dy2 * iy2 > 0):
+                dist_s_b = math.hypot(buoy[0] - start[0], buoy[1] - start[1])
+                dist_i_b = math.hypot(intersect[0] - buoy[0], intersect[1] - buoy[1])
+                if dist_i_b < (dist_s_b * 3.0 + r * 5.0):
+                    valid_intersection = True
+
+        if not valid_intersection:
+            if intersect is None:
+                log.warn('Teget cizgileri paralel, kesisim bulunamadi. Samandira arkasinda u-donus uretiliyor.')
+            else:
+                log.warn('Kesisim gecersiz (ters yonde veya uzak). Samandira arkasinda u-donus uretiliyor.')
+            # Alternatif kesisim noktasi: aracin yaklasim yonune gore samandira arkasi
+            mid_x = (start[0] + end[0]) / 2.0
+            mid_y = (start[1] + end[1]) / 2.0
+            approach_angle = math.atan2(buoy[1] - mid_y, buoy[0] - mid_x)
+            intersect = (buoy[0] + r * math.cos(approach_angle), 
+                         buoy[1] + r * math.sin(approach_angle))
 
         # Marker gosterimi icin hafizada tutalim
         self.intersect_point = intersect
@@ -164,8 +180,9 @@ class TangentRoutePlannerNode(Node):
         for i, (x, y) in enumerate(pts):
             ps = PoseStamped()
             ps.header = path.header
-            ps.pose.position.x = x
-            ps.pose.position.y = y
+            ps.pose.position.x = float(x)
+            ps.pose.position.y = float(y)
+            ps.pose.position.z = 0.0
             if i < len(pts) - 1:
                 yaw = math.atan2(pts[i + 1][1] - y, pts[i + 1][0] - x)
             else:
@@ -196,8 +213,9 @@ class TangentRoutePlannerNode(Node):
         # Samandira
         m = base(0, Marker.CYLINDER)
         m.pose.position.x, m.pose.position.y = buoy
+        m.pose.position.z = 0.0
         m.scale.x = m.scale.y = self.radius * 2.0
-        m.scale.z = 0.5
+        m.scale.z = 0.01
         m.color.r, m.color.g, m.color.b = 1.0, 0.0, 0.0
         m.color.a = 0.3 # Saydam kirmizi
         ma.markers.append(m)
@@ -213,17 +231,21 @@ class TangentRoutePlannerNode(Node):
         # Baslangic ve Bitis noktalari
         for mid, (x, y), (cr, cg, cb) in ((3, start, (0.0, 0.3, 1.0)),
                                           (4, end, (1.0, 0.9, 0.0))):
-            m = base(mid, Marker.SPHERE)
+            m = base(mid, Marker.CYLINDER)
             m.pose.position.x, m.pose.position.y = x, y
-            m.scale.x = m.scale.y = m.scale.z = 0.3
+            m.pose.position.z = 0.0
+            m.scale.x = m.scale.y = 0.3
+            m.scale.z = 0.01
             m.color.r, m.color.g, m.color.b, m.color.a = cr, cg, cb, 1.0
             ma.markers.append(m)
 
         # Kesisim Noktasi (Donus yapilacak yer)
         if hasattr(self, 'intersect_point'):
-            m = base(5, Marker.SPHERE)
+            m = base(5, Marker.CYLINDER)
             m.pose.position.x, m.pose.position.y = self.intersect_point
-            m.scale.x = m.scale.y = m.scale.z = 0.5
+            m.pose.position.z = 0.0
+            m.scale.x = m.scale.y = 0.5
+            m.scale.z = 0.01
             m.color.r, m.color.g, m.color.b, m.color.a = 1.0, 0.0, 1.0, 1.0 # Mor
             ma.markers.append(m)
             
