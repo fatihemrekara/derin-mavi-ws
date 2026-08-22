@@ -67,6 +67,7 @@ setup(
             'surface_square_blind_test = zed_pose_test.surface_square_blind_test:main',
             'dms_converter_node = zed_pose_test.dms_converter_node:main',
             'tangent_route_planner = zed_pose_test.tangent_route_planner:main',
+            'compass_turn_sequence = zed_pose_test.compass_turn_sequence:main',
         ],
     },
 )
